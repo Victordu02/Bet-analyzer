@@ -8,6 +8,15 @@ const state = (): AppState => ({ workspace: "demo", picks: [pick()], quotes: [qu
 const options: BacktestOptions = { strategyId: "s1", start: "2026-10-18T00:00:00.000Z", end: "2026-10-19T00:00:00.000Z", delayMinutes: 5, method: "fixed", initialCapitalCents: 100_000 };
 
 describe("chronological scenario evaluation", () => {
+  it("does not revive an expired provider price with a later observation or persistence timestamp", () => {
+    const data = state();
+    const source = data.picks[0];
+    data.quotes = [quote({ collectionMode: "provider", mappingStatus: "confirmed", providerLastUpdatedAt: "2026-10-18T09:00:00.000Z", providerTtlSeconds: 120, identitySnapshot: { eventKey: source.eventKey, event: source.event, startsAt: source.startsAt, market: source.market, selection: source.selection, line: source.line, rules: source.rules, kind: source.kind, timing: source.timing } })];
+    const result = backtest(data, options);
+    expect(result).toMatchObject({ candidateCount: 1, allocatedCount: 0, abstentionCount: 1 });
+    expect(result.rows[0].reason).toContain("fournisseur");
+  });
+
   it("replays observed Winamax odds rather than announced or closing odds without mutating data", () => {
     const data = state();
     data.quotes.push(quote({ id: "closing", odds: 5, closing: true, observedAt: "2026-10-18T11:59:00.000Z", recordedAt: "2026-10-18T11:59:00.000Z" }));

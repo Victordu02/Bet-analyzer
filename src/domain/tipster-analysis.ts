@@ -1,5 +1,6 @@
 import Decimal from "decimal.js";
 import { identity, matchesSegment, normalizedProfit } from "./calculations";
+import { assessQuote } from "./quote-assessment";
 import type {
   AppState,
   Pick,
@@ -322,29 +323,20 @@ function observations(state: AppState, level: ProofLevel): Observation[] {
         if (!current) continue;
         const asKnown = snapshotAt(current, timestamp(simulation.createdAt));
         const pick = asKnown.pick;
-        const latestQuote = state.quotes
-          .filter(
-            (quote) =>
-              quote.pickId === pick.id &&
-              !quote.closing &&
-              timestamp(quote.observedAt) >= timestamp(pick.publishedAt) &&
-              timestamp(quote.observedAt) <= timestamp(quote.recordedAt) &&
-              timestamp(quote.recordedAt) <= timestamp(simulation.createdAt),
-          )
-          .sort(
-            (left, right) =>
-              timestamp(right.observedAt) - timestamp(left.observedAt) ||
-              timestamp(right.recordedAt) - timestamp(left.recordedAt) ||
-              left.id.localeCompare(right.id),
-          )[0];
+        const quoteAssessment = assessQuote(
+          pick,
+          state.quotes,
+          simulation.settingsSnapshot.quoteMaxAgeMinutes,
+          new Date(simulation.createdAt),
+        );
+        const latestQuote = quoteAssessment.quote;
         const quotes =
           latestQuote &&
           latestQuote.odds === allocation.odds &&
           latestQuote.available &&
-          latestQuote.matchConfirmed &&
-          latestQuote.source.trim() &&
-          timestamp(simulation.createdAt) - timestamp(latestQuote.observedAt) <=
-            simulation.settingsSnapshot.quoteMaxAgeMinutes * 60_000
+          quoteAssessment.matching.status === "confirmed" &&
+          quoteAssessment.fresh &&
+          quoteAssessment.errors.length === 0
             ? [latestQuote]
             : [];
         const duplicate = allocatedIdentities.has(allocation.identity);

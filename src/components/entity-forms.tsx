@@ -53,7 +53,10 @@ export function EntityForms({ kind, state, initial = {}, onSave, onClose }: Enti
   const [result, setResult] = useState(String(initial.result ?? "open"));
   const [linkedPickId, setLinkedPickId] = useState(String(initial.pickId ?? ""));
   const [method, setMethod] = useState(String(initial.method ?? "fixed"));
-  const [selectedPicks, setSelectedPicks] = useState<string[]>([]);
+  const [selectedPicks, setSelectedPicks] = useState<string[]>(() => {
+    if (!Array.isArray(initial.pickIds)) return [];
+    return initial.pickIds.filter((id): id is string => typeof id === "string" && state.picks.some((pick) => pick.id === id));
+  });
   const [quoteAvailable, setQuoteAvailable] = useState(initial.available !== false);
   const now = new Date().toISOString();
   const linkedPick = state.picks.find((pick) => pick.id === linkedPickId);

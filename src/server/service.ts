@@ -11,9 +11,11 @@ import {allocate,matchesSegment} from '../domain/calculations';
 import {boolean,buildPick,buildTicket,date,enumValue,integer,number,object,text,validatePick,validateSettings,validateTicket} from './validation';
 import {importHash,importInput,previewImport,type ImportInput} from './imports';
 import {enrichAnalysisDemo} from './demo-analysis';
+import {prepareOddsSync} from '../connectors/odds-sync';
+import {pickIdentity} from '../connectors/the-odds-api';
 
 const entityNames=['tipsters','picks','quotes','strategies','tickets','ledger','simulations','imports','audit'] as const;
-const appendOnly=new Set<string>(['ledger','imports','audit','simulations']);
+const appendOnly=new Set<string>(['ledger','imports','audit','simulations','quotes']);
 function checkWorkspace(workspace:Workspace){if(workspace!=='personal'&&workspace!=='demo')throw new Error('Espace inconnu.');}
 export function emptyState(workspace:Workspace):AppState {return {workspace,tipsters:[],picks:[],quotes:[],tickets:[],ledger:[],strategies:[],simulations:[],imports:[],audit:[],settings:{...DEFAULT_SETTINGS}};}
 async function loadState(workspace:Workspace,client:PoolClient):Promise<AppState>{
@@ -79,7 +81,7 @@ function savePick(state:AppState,data:Record<string,unknown>,imported=false):{en
     if(isDeepStrictEqual(p,previous))return {entity:previous,status:'skipped'};
     p.revisions=[...previous.revisions,{at:new Date().toISOString(),description:imported?'Mise à jour CSV':'Correction manuelle',previous:{...previous,revisions:undefined}}];p.manuallyCorrected=!imported||previous.manuallyCorrected;
     state.picks[state.picks.indexOf(previous)]=p;
-    if(['eventKey','event','startsAt','market','selection','line','rules','kind'].some(key=>p[key as keyof Pick]!==previous[key as keyof Pick])&&state.quotes.some(q=>q.pickId===p.id)){
+    if(['eventKey','event','sport','competition','startsAt','market','selection','line','rules','kind','timing'].some(key=>p[key as keyof Pick]!==previous[key as keyof Pick])&&state.quotes.some(q=>q.pickId===p.id)){
       state.quotes.push({id:randomUUID(),pickId:p.id,bookmaker:'Winamax FR',odds:null,observedAt:new Date().toISOString(),recordedAt:new Date().toISOString(),source:'Correspondance à vérifier après révision du pronostic',sourceUrl:'',available:false,matchConfirmed:false,closing:false,referenceProbability:null,notes:'Les anciens relevés restent archivés ; vérifier à nouveau le marché exact.'});
     }
   }else state.picks.push(p);
@@ -122,7 +124,7 @@ function saveQuote(state:AppState,data:Record<string,unknown>):Quote{
   const available=boolean(data.available,true),matchConfirmed=boolean(data.matchConfirmed);
   if(available&&!matchConfirmed)throw new Error('Confirmez manuellement le marché, la sélection, la ligne et les règles Winamax FR.');
   const observedAt=date(data.observedAt??now,'Observation',false);if(observedAt>now)throw new Error('L’observation ne peut être future.');
-  const q:Quote={id:randomUUID(),pickId,bookmaker:'Winamax FR',odds:available?number(data.odds,'Cote',1.000001,100000):null,observedAt,recordedAt:now,source:text(data.source,'Source de la cote',true),sourceUrl:text(data.sourceUrl,'URL'),available,matchConfirmed,closing:boolean(data.closing),referenceProbability:data.referenceProbability==null||data.referenceProbability===''?null:number(data.referenceProbability,'Probabilité de référence',0.000001,0.999999),notes:text(data.notes,'Notes')};
+  const q:Quote={id:randomUUID(),pickId,bookmaker:'Winamax FR',odds:available?number(data.odds,'Cote',1.000001,100000):null,observedAt,recordedAt:now,source:text(data.source,'Source de la cote',true),sourceUrl:text(data.sourceUrl,'URL'),available,matchConfirmed,closing:boolean(data.closing),referenceProbability:data.referenceProbability==null||data.referenceProbability===''?null:number(data.referenceProbability,'Probabilité de référence',0.000001,0.999999),notes:text(data.notes,'Notes'),collectionMode:'manual',mappingStatus:matchConfirmed?'confirmed':'unconfirmed',identitySnapshot:pickIdentity(pick)};
   if(q.closing&&q.observedAt>pick.startsAt)throw new Error('Une cote de clôture doit avoir été observée au plus tard au début de l’événement.');
   if(q.referenceProbability!==null&&!q.notes)throw new Error('Documentez dans les notes le marché complet, la méthode de retrait de marge, la source et sa date pour cette probabilité de référence.');
   state.quotes.push(q);audit(state,'quote.save',q.id,'Observation manuelle ; aucun ticket créé');return q;
@@ -273,6 +275,28 @@ async function commitImport(state:AppState,payload:unknown):Promise<ImportBatch>
 }
 
 export async function executeAction(workspace:Workspace,action:string,payload:unknown):Promise<unknown>{
+  if(action==='odds.sync'){
+    const data=object(payload);
+    const input={pickId:text(data.pickId,'Pronostic',true),sportKey:text(data.sportKey,'Compétition fournisseur')||undefined,candidateId:text(data.candidateId,'Proposition fournisseur')||undefined,confirmMatch:data.confirmMatch===true};
+    const beforeCollection=await readState(workspace);
+    const expectedPick=requireRef(beforeCollection.picks,input.pickId,'Pronostic');
+    const prepared=await prepareOddsSync(beforeCollection,input);
+    return transaction(workspace,state=>{
+      const pick=requireRef(state.picks,input.pickId,'Pronostic');
+      if(!isDeepStrictEqual(pickIdentity(pick),prepared.identitySnapshot)||pick.sport!==expectedPick.sport||pick.competition!==expectedPick.competition)throw new Error('Le pronostic a changé pendant la collecte. Vérifiez à nouveau sa correspondance.');
+      const result={...prepared.result};
+      if(prepared.quote){
+        const draft=prepared.quote;
+        const duplicate=state.quotes.find(quote=>quote.pickId===draft.pickId&&quote.odds===draft.odds&&quote.available===draft.available
+          &&quote.providerLastUpdatedAt===draft.providerLastUpdatedAt&&isDeepStrictEqual(quote.provider,draft.provider)
+          &&isDeepStrictEqual(quote.identitySnapshot,draft.identitySnapshot)&&quote.observedAt===draft.observedAt);
+        if(duplicate){result.quoteId=duplicate.id;if(result.status==='updated')result.status='unchanged';}
+        else{const quote:Quote={...draft,id:randomUUID(),recordedAt:new Date().toISOString()};state.quotes.push(quote);result.quoteId=quote.id;}
+      }
+      audit(state,'odds.sync',input.pickId,JSON.stringify({...result,candidates:[],sports:[]}));
+      return result;
+    });
+  }
   if(action==='import.preview')return prepareImport(await readState(workspace),importInput(payload));
   if(action==='demo.seed'){if(workspace!=='demo')throw new Error('La démonstration est strictement isolée de l’espace personnel.');return seedDemo();}
   return transaction(workspace,async state=>{

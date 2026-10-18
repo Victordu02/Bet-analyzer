@@ -198,7 +198,7 @@ describe("temporal eligibility and proof levels", () => {
   });
   it("does not fall back to an older available quote after an unavailable observation", () => {
     const data = state();
-    data.quotes.push(quote({ id: "latest", observedAt: "2026-10-18T11:59:00.000Z", available: false, matchConfirmed: false, odds: null }));
+    data.quotes.push(quote({ id: "latest", observedAt: "2026-10-18T11:59:00.000Z", recordedAt: "2026-10-18T11:59:30.000Z", available: false, matchConfirmed: false, odds: null }));
     expect(decision(data.picks[0], data, now).status).toBe("Marché indisponible");
   });
   it("does not label retrospectively selected strategy rules as prospective", () => {

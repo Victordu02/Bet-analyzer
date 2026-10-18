@@ -1,4 +1,5 @@
 import Decimal from "decimal.js";
+import { assessQuote, conflictingOpenEventAliases } from "./quote-assessment";
 import type { Allocation, AppState, Pick, ProbabilitySource, Quote, SegmentFilter, Ticket } from "./types";
 
 const D = (value: Decimal.Value) => new Decimal(value);
@@ -209,9 +210,8 @@ export function identity(pick: Pick): string {
 
 export function decision(pick: Pick, state: AppState, now: Date = new Date()): { status: string; reason: string; quote: Quote | null; eligible: boolean } {
   const nowMs = now.getTime();
-  const quotes = state.quotes.filter(quote => quote.pickId === pick.id && !quote.closing && timestamp(quote.observedAt) <= nowMs && timestamp(quote.recordedAt) <= nowMs && timestamp(quote.observedAt) >= timestamp(pick.publishedAt))
-    .sort((a, b) => timestamp(b.observedAt) - timestamp(a.observedAt) || timestamp(b.recordedAt) - timestamp(a.recordedAt) || a.id.localeCompare(b.id));
-  const quote = quotes[0] ?? null;
+  const quoteAssessment = assessQuote(pick, state.quotes, state.settings.quoteMaxAgeMinutes, now);
+  const quote = quoteAssessment.quote;
   const reject = (status: string, reason: string) => ({ status, reason, quote, eligible: false });
   if (pick.result !== "open") return reject("Expiré", "Pronostic déjà réglé ; conservé dans l’historique.");
   if (!Number.isFinite(timestamp(pick.startsAt)) || !Number.isFinite(timestamp(pick.publishedAt)) || !Number.isFinite(timestamp(pick.observedAt)) || timestamp(pick.publishedAt) > nowMs || timestamp(pick.observedAt) > nowMs) return reject("Données insuffisantes", "Chronologie de publication ou d’observation invalide.");
@@ -224,10 +224,12 @@ export function decision(pick: Pick, state: AppState, now: Date = new Date()): {
   if (!strategies.some(strategy => timestamp(strategy.frozenAt) <= timestamp(strategy.validationStart) && timestamp(strategy.discoveryEnd) <= timestamp(strategy.frozenAt) && timestamp(strategy.validationStart) <= timestamp(pick.observedAt) && timestamp(strategy.createdAt) <= timestamp(strategy.frozenAt))) return reject("En observation", "Aucun segment actif figé après découverte et avant sa période de validation ne correspond à ce pronostic.");
   if (!quote) return reject("Données insuffisantes", "Aucune cote Winamax horodatée, hors clôture, disponible à cette date après publication.");
   if (!quote.available) return reject("Marché indisponible", "Le dernier relevé signale ce marché indisponible.");
-  if (!quote.matchConfirmed) return reject("Données insuffisantes", "La correspondance exacte de l’événement, du marché, de la ligne et des règles reste à confirmer.");
+  if (quoteAssessment.matching.status !== "confirmed") return reject("Données insuffisantes", quoteAssessment.matching.issues.join(" "));
+  if (quoteAssessment.errors.length) return reject("Données insuffisantes", quoteAssessment.errors.join(" "));
   if (quote.odds == null || !validOdds(quote.odds)) return reject("Données insuffisantes", "Cote décimale exploitable absente.");
-  if (nowMs - timestamp(quote.observedAt) > state.settings.quoteMaxAgeMinutes * 60_000) return reject("En observation", "La cote est ancienne : un nouveau relevé est nécessaire.");
+  if (!quoteAssessment.fresh) return reject("En observation", "La cote est ancienne : un nouveau relevé est nécessaire selon la limite personnelle, la politique PRISME et l’âge du prix fournisseur.");
   if (pick.minOdds != null && quote.odds < pick.minOdds) return reject("Cote insuffisante selon le seuil défini", "La cote est inférieure au seuil déclaré par le tipster ; ce seuil ne prouve pas la rentabilité.");
+  if (conflictingOpenEventAliases(pick, state, now).length) return reject("En observation", "Rapprochez les identifiants d’événement avant allocation : le même événement fournisseur est déjà exposé sous une autre clé dans un ticket ouvert.");
   return { status: "À analyser", reason: "Segment suivi et cote récente confirmée. Disponibilité et acceptation de la mise restent à vérifier manuellement ; espérance inconnue sans probabilité documentée.", quote, eligible: true };
 }
 

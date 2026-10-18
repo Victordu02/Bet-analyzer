@@ -353,6 +353,20 @@ describe("comparable tipster results", () => {
 });
 
 describe("four independent evidence populations", () => {
+  it("honors the provider price TTL in saved simulations even when collection and persistence are recent", () => {
+    const source = observed();
+    const data = state([source]);
+    data.simulations = [simulation(source)];
+    data.quotes = [quote("p1", {
+      collectionMode: "provider", mappingStatus: "confirmed", providerLastUpdatedAt: "2026-01-08T09:00:00.000Z", providerTtlSeconds: 120,
+      identitySnapshot: { eventKey: source.eventKey, event: source.event, startsAt: source.startsAt, market: source.market, selection: source.selection, line: source.line, rules: source.rules, kind: source.kind, timing: source.timing },
+    })];
+    expect(analyzeSegment(data, { level: "simulated" })).toMatchObject({ settled: 0, missingProof: 1 });
+    data.quotes[0].providerLastUpdatedAt = "2026-01-08T09:07:00.000Z";
+    data.simulations[0].createdAt = "2026-01-08T09:09:00.000Z";
+    expect(analyzeSegment(data, { level: "simulated" }).settled).toBe(1);
+  });
+
   it("does not upgrade an imported or impossible prospective timestamp", () => {
     const data = state([
       pick({ evidence: "observed", observedAt: "2026-01-03T00:00:00.000Z" }),

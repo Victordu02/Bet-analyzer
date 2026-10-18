@@ -1,16 +1,17 @@
 # Prochaines étapes PRISME
 
-Le socle local est implémenté. Les tâches ci-dessous restent à réaliser ; les connecteurs externes sont désactivés et aucun déploiement Vercel n’a été effectué. Conserver les règles de `AGENTS.md` et la séparation des quatre niveaux de preuve dans chaque extension.
+Le socle local est implémenté. The Odds API dispose d’un adaptateur à la demande, à activer avec une clé serveur ; les autres connecteurs automatiques restent désactivés et aucun déploiement Vercel n’a été effectué. Conserver les règles de `AGENTS.md` et la séparation des quatre niveaux de preuve dans chaque extension.
 
 ## 1. Activer The Odds API pour `winamax_fr`
 
 Prérequis : clé API disponible côté serveur et réseau autorisé vers `api.the-odds-api.com` ainsi que la documentation officielle. Voir `docs/CONNECTORS.md`.
 
-- [ ] Vérifier dans la documentation et les réponses officielles la disponibilité effective de `winamax_fr`, des sports et marchés requis, ainsi que les droits et limites du forfait. La couverture actuelle n’est pas encore confirmée.
+- [x] Confirmer `winamax_fr` dans la documentation officielle actuelle et vérifier le contrat v4. La couverture effective varie selon le sport, le marché et les droits du forfait.
 - [ ] Configurer une variable privée côté serveur, par exemple `ODDS_API_KEY`, sans préfixe `NEXT_PUBLIC_`, et autoriser les domaines nécessaires. Ne jamais versionner ni journaliser la clé.
-- [ ] Implémenter l’adaptateur The Odds API en ciblant explicitement `winamax_fr`, avec correspondance des événements, marchés, sélections et lignes, horodatage fournisseur et horodatage de collecte. Faire valider les correspondances ambiguës.
-- [ ] Gérer quotas, cache, reprises bornées, erreurs, absence de cote et fraîcheur ; rendre visibles la provenance et l’état réel de la connexion.
-- [ ] Vérifier le connecteur sur des réponses représentatives et une collecte autorisée avant activation. Une cote collectée reste une observation ; elle ne prouve ni l’acceptation d’un ticket ni une probabilité prédictive.
+- [x] Implémenter l’adaptateur The Odds API en ciblant explicitement `winamax_fr`, avec correspondance des événements, marchés, sélections et lignes, horodatage fournisseur et horodatage de collecte. Faire valider les correspondances ambiguës.
+- [x] Gérer quotas, cache, reprises bornées, erreurs, absence de cote et fraîcheur ; rendre visibles la provenance et l’état réel de la connexion.
+- [x] Vérifier le transport et les correspondances sur des réponses fictives représentatives sans consommer de quota réel.
+- [ ] Effectuer une recette authentifiée autorisée après configuration de la clé et du réseau : couverture effective, coût/quota, règles et comparaison avec Winamax. Une cote collectée reste une observation ; elle ne prouve ni l’acceptation d’un ticket ni une probabilité prédictive.
 
 Critère de fin : les cotes Winamax France sont consultables avec leur source et leur fraîcheur, sans fabriquer de disponibilité quand le fournisseur ne couvre pas le marché. Aucun accès au compte Winamax ni pari automatique.
 
@@ -61,3 +62,18 @@ Critère de fin : une instance privée HTTPS conserve durablement les données e
 - [ ] Si des données de capital et de flux propres aux bankrolls publiques deviennent disponibles, les modéliser pour calculer leur valeur de part et leur drawdown en pourcentage. En attendant, afficher explicitement « non applicable » par profil ; ne pas attribuer les flux du portefeuille personnel à chaque tipster.
 
 Conventions et limites : [TIPSTER_ANALYSIS.md](docs/TIPSTER_ANALYSIS.md) et [CALCULATIONS.md](docs/CALCULATIONS.md).
+
+## 5. Radar Winamax et espérance — sections 6 et 7
+
+- [x] Livrer le radar filtrable avec les six statuts explicites et conserver les dossiers expirés, manqués et indisponibles.
+- [x] Collecter The Odds API uniquement à la demande côté serveur, choisir le sport du catalogue puis confirmer la correspondance exacte ; ne jamais appeler le fournisseur depuis la démonstration.
+- [x] Conserver premières cotes comparables, variations, indisponibilités, sources, dates fournisseur/collecte/enregistrement et identité du marché, sans rajeunissement par le cache.
+- [x] Calculer probabilité d’équilibre, rendement espéré, espérance monétaire et sensibilité, avec provenance explicite et « espérance inconnue » sans estimation exploitable.
+- [x] Exiger un marché complet documenté et confirmé pour le retrait de marge ; signaler que la normalisation est une convention, sans preuve d’avantage.
+- [x] Ajouter les états nets explicites pour remboursements, règlements partiels, freebets et frais, sans inventer de probabilités.
+- [x] Enrichir la fiche de décision : horaires de Paris, sélection/marché/ligne/règles, historique des cotes, segments suivis, exposition, limites et conditions d’abstention.
+- [x] Appliquer les mêmes contrôles de fraîcheur aux simulations historiques ; suspendre une décision lorsque des identifiants locaux différents masquent un événement fournisseur déjà exposé.
+- [x] Valider `npm test` (**115 tests**, 8 fichiers), `npm run typecheck` et `npm run build`, ainsi que le radar et la fiche sur ordinateur/mobile dans Chromium. Le transport et la persistance du connecteur sont testés sur réponses fictives sans consommation de quota externe.
+- [ ] Réaliser la recette de connexion réelle après configuration sécurisée de `ODDS_API_KEY` ; aucun accès au compte joueur, pari automatique ou abonnement payant n’est nécessaire à ce module.
+
+Parcours, configuration et conventions : [RADAR.md](docs/RADAR.md), [CONNECTORS.md](docs/CONNECTORS.md) et [CALCULATIONS.md](docs/CALCULATIONS.md).

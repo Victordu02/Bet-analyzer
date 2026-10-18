@@ -1,169 +1,62 @@
 # Connecteurs, provenance et accès externes
 
-Dernière vérification : **18 octobre 2026** (Europe/Paris).
+Dernière vérification documentaire : **18 octobre 2026**. Pronostics, cotes et tickets personnels restent trois familles indépendantes. Une cote ne constitue ni un ticket accepté ni un accès au compte Winamax.
 
-L'application distingue trois familles indépendantes : pronostics des tipsters,
-cotes et résultats sportifs, puis tickets et mouvements du compte personnel.
-Une source de cotes ne donne aucun accès au compte Winamax. Les saisies et imports
-locaux restent utilisables sans service externe ni abonnement.
+## État des sources
 
-## État réel de la livraison
+| Source | Parcours disponible | Limite |
+| --- | --- | --- |
+| Pronostics fournis par l’utilisateur | Saisie et CSV générique, provenance conservée | Droits nécessaires sur les données |
+| Bet Analytix | Import manuel ; connecteur automatique désactivé | Conditions et accès automatisé autorisé non établis |
+| Cotes Winamax manuelles | Relevés datés avec confirmation du marché exact | Source et date conservées |
+| The Odds API | Adaptateur v4 ciblant uniquement `winamax_fr`, collecte à la demande | Clé serveur requise ; couverture vérifiée dans chaque réponse |
+| Compte Winamax | Saisie et CSV générique de tickets | Aucun accès automatique au compte ni export natif présumé |
 
-| Source | État | Parcours disponible | Condition d'une future connexion |
-| --- | --- | --- | --- |
-| Pronostics fournis par l'utilisateur | Import manuel | Saisie et CSV générique, provenance conservée | Droits suffisants sur les données importées |
-| Bet Analytix | Désactivé ; accès autorisé non établi | Import de fichiers obtenus avec les droits nécessaires | Vérifier les CGU applicables et obtenir un moyen d'accès expressément autorisé |
-| Cotes Winamax saisies par l'utilisateur | Import manuel | Observation de cote datée, distincte de la cote acceptée sur un ticket | Vérifier soi-même l'événement, le marché, la sélection, la ligne et les règles |
-| The Odds API | Non configuré ; aucun appel externe implémenté | Architecture permettant un futur adaptateur | Vérifier couverture, contrat et tarification ; disposer d'une clé fournie dans les paramètres sécurisés |
-| Compte Winamax | Import manuel ; aucune synchronisation | Tickets et mouvements saisis ou importés par l'utilisateur | Un accès officiel ou un fichier effectivement fourni et utilisable avec autorisation |
+**Aucune clé The Odds API n’est configurée dans l’installation vérifiée.** Les tests du connecteur utilisent des réponses fictives et un transport injecté ; aucune collecte authentifiée de cotes réelles n’est revendiquée. La démonstration n’appelle jamais le fournisseur.
 
-Les CSV de ce projet sont des **formats génériques propres à l'application**.
-Ils ne sont présentés ni comme des exports natifs Winamax, ni comme des exports
-officiels Bet Analytix. Aucun mot de passe de compte joueur n'est collecté.
-Aucun pari, dépôt, retrait ou cashout n'est envoyé à un bookmaker.
+Les CSV PRISME sont des formats génériques propres au projet. Aucun identifiant de compte joueur n’est collecté. Aucun pari, dépôt, retrait ou cashout n’est envoyé au bookmaker.
 
-## Bet Analytix : vérification bloquée
+## The Odds API : contrat officiel vérifié
 
-Document demandé :
+Les pages suivantes sont accessibles lors de cette nouvelle vérification et remplacent la conclusion de blocage réseau de la recette initiale :
 
-- [CGU Bet Analytix](https://www.bet-analytix.com/docs/conditions-generales-utilisation-bet-analytix.pdf).
+- [Bookmakers et régions](https://the-odds-api.com/sports-odds-data/bookmaker-apis.html) : `winamax_fr` désigne Winamax France, régions Europe et France. Disponibilité variable selon sport et marché.
+- [Guide v4](https://the-odds-api.com/liveapi/guides/v4/) : catalogue `/v4/sports`, cotes `/v4/sports/{sport}/odds`, paramètres `bookmakers`, `markets`, `oddsFormat`, `dateFormat`, structure des événements et en-têtes de quota.
+- [Schéma OpenAPI v4](https://the-odds-api.com/api-reference/v4/schema.yml) : événements, bookmakers, marchés et issues `name`, `price`, `point`.
+- [Marchés](https://the-odds-api.com/sports-odds-data/betting-markets.html) : `h2h`, `spreads`, `totals` et limites de couverture ; le nul fait partie du marché de vainqueur du football.
+- [Limites de débit](https://the-odds-api.com/guide/rate-limit.html) : erreurs 429 possibles, y compris en dessous d’une limite annoncée ; `Retry-After` non garanti.
+- [Historiques](https://the-odds-api.com/historical-odds-data/) : produit payant distinct des cotes courantes. Aucune date de début de couverture historique Winamax n’a été établie pour ce projet.
 
-La tentative de téléchargement a échoué **avant réception du document**, avec
-`Tunnel connection failed: 403 Forbidden` émis par le proxy réseau de
-l'environnement. Le contenu et la version des CGU n'ont donc pas pu être lus.
-Ce résultat n'est ni une réponse du site établissant une interdiction, ni une
-preuve d'autorisation.
+Le fournisseur recommande l’horodatage **du marché** `last_update` ; celui du bookmaker est déprécié. Les en-têtes `x-requests-remaining`, `x-requests-used` et `x-requests-last` renseignent le quota observé. Ils ne garantissent ni disponibilité future ni coût nul.
 
-Le cahier des charges signale des restrictions d'extraction et de robots. Elles
-restent à vérifier dans le document applicable ; aucune clause ou citation n'est
-inventée ici. Le connecteur reste désactivé. Aucune page de communauté, bankroll,
-compte ou historique de pronostics n'a été collectée.
+Le catalogue des sports est documenté sans coût de quota. Les requêtes de cotes peuvent consommer des crédits selon les marchés et bookmakers demandés. Aucune souscription ni commande d’historique payant n’est effectuée par l’application.
 
-Pour l'activer ultérieurement, conserver la date et la version des conditions,
-la portée de l'autorisation, le moyen d'accès fourni, les données couvertes,
-les limites de réutilisation et la durée de conservation. Une bankroll publique
-ou l'accord de son tipster ne suffisent pas à établir les droits de collecte de
-la plateforme. Une API ou un export ne sera implémenté qu'après vérification de
-sa documentation réelle.
+## Configuration et rapprochement
 
-## The Odds API : contrat partiellement vérifié, couverture non vérifiée
+1. Configurer **`ODDS_API_KEY` côté serveur** dans `.env.local` ou les secrets de l’hébergeur, puis redémarrer le serveur pour charger sa configuration. Laisser cette variable vide conserve le fonctionnement manuel. Aucun préfixe `NEXT_PUBLIC_`.
+2. Autoriser `api.the-odds-api.com` pour les requêtes et `the-odds-api.com` pour la documentation, en conservant la vérification TLS.
+3. Depuis un dossier personnel du radar, demander une collecte, choisir le sport/compétition du catalogue et examiner les correspondances proposées.
+4. Confirmer explicitement événement, horaire, marché, sélection, ligne et règles. Une ressemblance de nom ne crée pas une correspondance certaine. Les cas non pris en charge restent en saisie manuelle.
+5. Conserver l’observation et vérifier sa fraîcheur avant décision. Première cote, variations, indisponibilités et confirmations restent traçables.
 
-Les trois pages officielles demandées ont rencontré le même refus de tunnel
-réseau ; leur contenu courant n'a pas été consulté :
+Les requêtes de cotes fixent `bookmakers=winamax_fr`. Les réponses d’autres bookmakers ne servent pas de repli à une cote Winamax manquante. Les combinés et marchés non reconnus ne sont pas reconstruits à partir de cotes isolées.
 
-- [Bookmakers et régions](https://the-odds-api.com/sports-odds-data/bookmaker-apis.html).
-- [Guide v4](https://the-odds-api.com/liveapi/guides/v4/).
-- [Données historiques](https://the-odds-api.com/historical-odds-data/).
+Les règles de règlement ne sont pas prouvées par le simple nom d’un marché fournisseur. Leur correspondance nécessite une vérification humaine. Une association confirmée ne peut être réutilisée que pour une identité de pronostic inchangée.
 
-Les exemples publics du fournisseur sur son dépôt GitHub ont pu être lus
-directement, sans passer par un service tiers :
+## Fraîcheur, cache, quotas et repli
 
-- [README des exemples Python v4](https://github.com/the-odds-api/samples-python/blob/master/README.md)
-  ([contenu consulté](https://raw.githubusercontent.com/the-odds-api/samples-python/master/README.md)).
-- [Exemple officiel `odds.py`](https://github.com/the-odds-api/samples-python/blob/master/odds.py)
-  ([contenu consulté](https://raw.githubusercontent.com/the-odds-api/samples-python/master/odds.py)).
+Horodatage fournisseur et heure de collecte sont distincts. Relire un cache ou renouveler une requête ne rajeunit pas une cote ancienne. Les cotes de clôture ou enregistrées après une décision ne servent pas à justifier cette décision passée.
 
-Ce que ces exemples établissent, à la date de consultation :
+L’adaptateur utilise un cache de transport borné et des reprises limitées. Il tient compte des quotas et d’un éventuel `Retry-After`, et présente une date de reprise quand une limite est rencontrée. Erreurs réseau, délais d’attente, refus d’accès et réponses invalides donnent un état explicite. Les URL contenant la clé et les erreurs brutes du fournisseur ne sont ni journalisées ni renvoyées au navigateur.
 
-- Une clé est nécessaire pour les appels ; le README renvoie vers le fournisseur
-  pour en obtenir une. Aucun compte n'a été créé et aucun abonnement souscrit.
-- L'exemple utilise `GET https://api.the-odds-api.com/v4/sports`, puis
-  `GET https://api.the-odds-api.com/v4/sports/{sport}/odds`.
-- Il illustre les paramètres de région, de marché, de format de cote et de date ;
-  il mentionne `h2h`, `spreads` et `totals` pour les marchés de cet endpoint.
-- Il décrit, pour l'appel illustré, un coût de quota égal au nombre de marchés
-  multiplié par le nombre de régions et lit les en-têtes
-  `x-requests-remaining` et `x-requests-used`.
+L’absence d’un marché dans ce flux ne prouve pas son absence sur tous les parcours Winamax. Un marché suspendu peut disparaître d’une réponse selon la cadence du fournisseur. Le radar explique le périmètre de l’indisponibilité observée.
 
-Ces exemples ne suffisent pas à établir le catalogue commercial courant ni les
-conditions de chaque endpoint. Les points suivants restent **non vérifiés** :
+Sans clé, réseau, correspondance ou quota, les relevés manuels et l’historique restent disponibles. Ils gardent provenance et dates ; aucune ancienne cote ne devient une nouvelle collecte. Les dossiers manqués et indisponibles restent dans le radar.
 
-| Point | Conséquence dans l'application |
-| --- | --- |
-| Présence actuelle de Winamax France et identifiant exact du bookmaker | Aucune disponibilité Winamax n'est promise ; aucun identifiant deviné n'est utilisé |
-| Sports, compétitions, marchés, lignes et règles réellement couverts | Aucune équivalence avec un ticket Winamax n'est présumée |
-| Profondeur et granularité des historiques, historique par bookmaker | Aucun backtest ne prétend disposer de cotes historiques fournisseur |
-| Résultats sportifs et modalités de règlement | Aucun règlement automatique de ticket personnel |
-| Cadence de mise à jour et délais par produit | Une cote saisie garde son horodatage ; aucune fraîcheur fournisseur n'est inventée |
-| Quotas par offre, coût des historiques, limites de débit et tarifs en euros | Aucun coût nul, gratuit illimité ou prix d'abonnement n'est affirmé |
+La collecte se fait à la demande. Aucun appel fournisseur n’est déclenché par un build, un test, une lecture de statut ou l’ouverture de la démonstration. Aucun appel réseau n’est maintenu sous verrou de transaction PostgreSQL.
 
-Avant d'implémenter l'adaptateur, relire les pages officielles, vérifier la
-couverture dans un accès de lecture autorisé et conserver la version du contrat.
-Un futur adaptateur doit enregistrer le fournisseur, l'événement, le bookmaker,
-le marché, la sélection, la ligne, les règles, l'horodatage fournisseur et
-l'horodatage de collecte. Il doit aussi gérer les erreurs et quotas, limiter les
-reprises, et masquer la clé dans les URL et journaux. La vérification humaine
-reste nécessaire pour les correspondances ambiguës. Une cote observée n'est pas
-une cote acceptée ni une garantie de montant disponible.
+## Autres accès non établis
 
-## Compte Winamax : aucune API ou export natif établi
+Les [CGU Bet Analytix](https://www.bet-analytix.com/docs/conditions-generales-utilisation-bet-analytix.pdf) n’avaient pas pu être reçues lors de la recette initiale. Aucun droit d’extraction n’en est déduit. Une bankroll publique ou l’accord d’un tipster ne suffit pas à lever les restrictions de sa plateforme ; une future intégration nécessitera un accès autorisé documenté.
 
-Source officielle tentée : [site Winamax France](https://www.winamax.fr/).
-Le proxy a refusé la connexion avant réception du site. Aucun espace authentifié
-n'a été visité. Les possibilités d'export du compte et de synchronisation
-autorisée n'ont pas pu être vérifiées.
-
-L'absence de documentation vérifiée ne prouve pas l'absence d'un service. Elle
-interdit de présenter ici une API publique de compte joueur, un export CSV
-natif, une pagination, un mécanisme d'authentification ou une collecte locale
-assistée comme disponibles. Le parcours livré repose sur les données que
-l'utilisateur fournit volontairement et dont il peut justifier la provenance.
-
-Si Winamax fournit un fichier ou un accès documenté, conserver un exemplaire
-expurgé du format, les règles de règlement, les identifiants stables et les
-conditions d'utilisation avant de développer un adaptateur. Une future
-synchronisation restera en lecture seule. Les retraits, dépôts, mises et
-cashouts restent des opérations manuelles effectuées sur Winamax.
-
-## Conditions réseau et secrets
-
-Domaines nécessaires à une reprise de la vérification documentaire :
-
-- `www.bet-analytix.com` ;
-- `the-odds-api.com` ;
-- `www.winamax.fr` ;
-- `nextjs.org`, `orm.drizzle.team`, `www.postgresql.org` pour les documentations
-  techniques.
-
-`api.the-odds-api.com` ne sera nécessaire qu'à un futur connecteur autorisé.
-L'ajout d'un domaine aux réglages n'accorde pas de droit de collecte et ne prouve
-pas l'application immédiate du nouveau réglage à une machine déjà démarrée.
-Ne jamais remplacer une liste réseau existante inconnue. Les tests ci-dessus
-n'ont désactivé ni TLS ni vérification de certificats.
-
-Les services locaux n'exigent aucune clé externe. Une éventuelle clé de données
-sera placée côté serveur dans la configuration sécurisée, jamais dans un CSV,
-un rapport, un préfixe `NEXT_PUBLIC_`, le dépôt ou la conversation.
-
-## Vérification des dépendances techniques
-
-Les sites de documentation Next.js, Drizzle et PostgreSQL étaient bloqués par
-le proxy. Les sources officielles suivantes ont cependant pu être consultées :
-
-| Source officielle consultée | Observation vérifiée |
-| --- | --- |
-| [Installation Next.js, dépôt Vercel](https://raw.githubusercontent.com/vercel/next.js/canary/docs/01-app/01-getting-started/01-installation.mdx) | Node.js minimum 20.9 ; TypeScript minimum 5.1 ; document de la branche `canary`, susceptible d'évoluer |
-| [Manifeste publié Next.js 16.4.2](https://registry.npmjs.org/next/16.4.2) | `engines.node >=20.9.0` ; React et React DOM `^19.0.0` acceptés par les dépendances homologues |
-| [README officiel Drizzle](https://raw.githubusercontent.com/drizzle-team/drizzle-orm/main/README.md) | Prise en charge de PostgreSQL annoncée ; migrations prises en charge par Drizzle Kit |
-| [Manifeste publié Drizzle ORM 0.45.4](https://registry.npmjs.org/drizzle-orm/0.45.4) | Pilote `pg >=8` accepté |
-| [Manifeste publié pg 8.23.1](https://registry.npmjs.org/pg/8.23.1) | Node.js `>=16.0.0` requis |
-
-Les manifestes ont été interrogés avec `npm view` sur le registre npm officiel.
-Le verrou de dépendances du projet fixe les versions effectivement installées ;
-les tests et le démarrage consignés dans la documentation du projet établissent
-leur fonctionnement réel. Les versions minimales documentées ne remplacent
-pas ces vérifications d'exécution. Le calendrier de support PostgreSQL n'a pas
-pu être relu sur [sa page officielle](https://www.postgresql.org/support/versioning/).
-
-## Reprise de la vérification
-
-1. Appliquer les destinations réseau nécessaires dans l'environnement, puis
-   recommencer les lectures qui ont échoué.
-2. Archiver uniquement les documents et métadonnées autorisés : URL, date,
-   version des conditions et limites de licence.
-3. Vérifier un éventuel accès avec les autorisations existantes et sans exposer
-   les valeurs des secrets.
-4. Tester un adaptateur avec des réponses de test explicitement identifiées,
-   puis un accès réel autorisé avant d'afficher un état « synchronisé ».
-5. Ajouter le résultat des tests de couverture, quota, fraîcheur et erreurs à
-   cette documentation. Ne modifier l'état du connecteur qu'après validation.
+Aucune API publique de compte Winamax ni format natif d’export n’a été établi. Le parseur de copier-coller prévu dans `TODO.md` nécessitera des exemples réels anonymisés. Une source de cotes ne donne pas accès à l’historique, au solde ou aux opérations du joueur.

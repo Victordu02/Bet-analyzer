@@ -23,7 +23,18 @@ export interface Quote {
   observedAt: string; recordedAt: string; source: string; sourceUrl: string;
   available: boolean; matchConfirmed: boolean; closing: boolean;
   referenceProbability: number | null; notes: string;
+  collectionMode?: "manual" | "provider";
+  mappingStatus?: "unconfirmed" | "confirmed" | "ambiguous";
+  providerLastUpdatedAt?: string | null;
+  providerTtlSeconds?: number | null;
+  identitySnapshot?: PickIdentitySnapshot;
+  provider?: {
+    id: "the-odds-api"; bookmakerKey: "winamax_fr"; sportKey: string; eventId: string;
+    marketKey: "h2h" | "spreads" | "totals"; outcomeName: string; line: string;
+    homeTeam: string; awayTeam: string;
+  };
 }
+export type PickIdentitySnapshot = { [Key in "eventKey" | "event" | "startsAt" | "market" | "selection" | "line" | "rules" | "kind" | "timing"]: Pick[Key] };
 export interface Ticket {
   id: string; sourceId: string; pickId: string | null; bookmaker: string;
   event: string; eventKey: string; selection: string; market: string; line: string;

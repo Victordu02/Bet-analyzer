@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AppState, ImportBatch } from "@/domain/types";
+import { OddsConnectorPanel } from "@/components/odds-connector-panel";
 
 type ImportKind = "picks" | "tickets";
 type PreviewRow = {
@@ -15,6 +16,7 @@ type Column = { key: string; label: string; required?: boolean };
 type Props = {
   state: AppState;
   mutate: (action: string, payload: Record<string, unknown>) => Promise<unknown>;
+  onOpenQuote: (pickId?: string) => void;
 };
 
 const PICK_COLUMNS: Column[] = [
@@ -89,7 +91,7 @@ function displayValue(value: unknown): string {
   return String(value);
 }
 
-export function SourcesView({ state, mutate }: Props) {
+export function SourcesView({ state, mutate, onOpenQuote }: Props) {
   const [kind, setKind] = useState<ImportKind>("picks");
   const [csv, setCsv] = useState("");
   const [fileName, setFileName] = useState("saisie.csv");
@@ -245,10 +247,10 @@ export function SourcesView({ state, mutate }: Props) {
         </article>
         <article className="panel source-card">
           <p className="eyebrow">02 · COTES WINAMAX FR</p><h3>Observations de marché</h3>
-          <span className="badge badge-teal">Saisie manuelle</span>
+          <span className="badge badge-outline">Relevés explicites</span>
           <p className="muted">{state.quotes.length} observation{state.quotes.length > 1 ? "s" : ""} horodatée{state.quotes.length > 1 ? "s" : ""}</p>
-          <p>Les observations de cotes sont saisies avec leur source et leur heure de consultation. Aucune collecte automatique active.</p>
-          <button type="button" className="button button-secondary" disabled title="Une source autorisée et documentée est nécessaire avant toute intégration.">Flux de cotes indisponible</button>
+          <p>Saisissez un relevé sourcé ou demandez une collecte The Odds API lorsque le serveur est configuré. Chaque correspondance reste à vérifier.</p>
+          <a className="button button-secondary" href="#odds-source">Voir l’état du connecteur</a>
         </article>
         <article className="panel source-card">
           <p className="eyebrow">03 · COMPTE PERSONNEL</p><h3>Tickets réellement joués</h3>
@@ -257,6 +259,10 @@ export function SourcesView({ state, mutate }: Props) {
           <p>Importez votre historique réel pour suivre les mises, retours, frais et freebets. Aucun identifiant de connexion n’est demandé.</p>
           <button type="button" className="button button-secondary" disabled title="La connexion automatique au compte Winamax n’est pas intégrée.">Synchronisation indisponible</button>
         </article>
+      </div>
+
+      <div id="odds-source">
+        <OddsConnectorPanel state={state} mutate={mutate} onOpenManual={onOpenQuote} />
       </div>
 
       <section className="panel import-panel" aria-labelledby="import-title">

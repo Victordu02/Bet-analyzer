@@ -1,6 +1,6 @@
 # Conventions financières et statistiques
 
-Les fonctions déterministes sont dans `src/domain/calculations.ts`, `src/domain/tipster-analysis.ts` et `src/domain/backtest.ts`. Les tests ciblés du classement et des spécialités se lancent avec `npm test -- src/domain/tipster-analysis.test.ts`. Les ratios utilisent des fractions : `0.10` signifie 10 %. Les montants comptables sont des centimes entiers sûrs JavaScript ; les multiplications monétaires et arrondis utilisent Decimal. Une mise est arrondie vers le bas au centime. Une espérance monétaire affichée est également arrondie vers le bas au centime ; ce n’est pas un montant encaissé.
+Les fonctions déterministes sont dans `src/domain/calculations.ts`, `src/domain/tipster-analysis.ts`, `src/domain/radar.ts`, `src/domain/quote-assessment.ts` et `src/domain/backtest.ts`. Les tests ciblés du classement et des spécialités se lancent avec `npm test -- src/domain/tipster-analysis.test.ts`, ceux du radar et de l’espérance avec `npm test -- src/domain/radar.test.ts`. Les ratios utilisent des fractions : `0.10` signifie 10 %. Les montants comptables sont des centimes entiers sûrs JavaScript ; les multiplications monétaires et arrondis utilisent Decimal. Une mise est arrondie vers le bas au centime. Une espérance monétaire affichée est également arrondie vers le bas au centime ; ce n’est pas un montant encaissé.
 
 ## Classement et spécialités des tipsters
 
@@ -35,6 +35,8 @@ Les limites de segments sont prédéfinies dans les filtres enregistrés : borne
 
 ## Espérance, probabilités, marge et CLV
 
+`radar.ts` ajoute la validation de provenance, le marché complet documenté, la sensibilité et les états nets ; voir [RADAR.md](RADAR.md). Une probabilité 0 ou 1 est une borne mathématique valide, sans certifier son réalisme. Les estimations de marché ou de modèle doivent être liées à l’identité du pari pour être utilisées dans une fiche ; une estimation générique n’est pas diffusée automatiquement à tous les dossiers.
+
 Le moteur binaire cash sans frais applique :
 
 `seuil = 1/cote`, `rendement espéré = p × cote − 1`, `espérance = mise × rendement espéré`, `Kelly = max(0, (p × cote − 1)/(cote − 1))`.
@@ -42,6 +44,8 @@ Le moteur binaire cash sans frais applique :
 La probabilité doit être explicitement fournie avec la provenance manuelle, marché ou modèle. Aucune probabilité n’est déduite du taux de réussite d’un tipster. Une hypothèse manuelle est une simulation, pas la preuve d’un avantage. En l’absence de probabilité valide : espérance et Kelly sont inconnus ; seules des comparaisons explicites de mise fixe ou en pourcentage peuvent exister. Les combinés, live, remboursements conditionnels et autres règlements complexes ne sont pas éligibles à ce moteur de mise binaire. Il n’existe pas de modèle prédictif validé intégré.
 
 `noVig` normalise les inverses des cotes d’un **marché complet de résultats mutuellement exclusifs** : `(1/o_i) / Σ(1/o_j)`. Le moteur ne peut pas prouver que le marché fourni est complet ; cette vérification revient à la saisie et à la provenance. Une seule cote ou une cote invalide renvoie un résultat indisponible. La normalisation des seules cotes du bookmaker ne suffit pas à établir un avantage contre celui-ci.
+
+`normalizeCompleteMarket` exige en plus les libellés distincts, la source et son URL, l’horodatage, les règles/couverture et la confirmation du marché complet. `evaluateOutcomeStates` traite les retours bruts et frais de chaque état avec leurs probabilités documentées ; la somme doit être égale à 1, sans renormalisation automatique. La mise cash est déduite une seule fois par état ; une freebet ne crée pas de coût cash fictif. L’espérance est arrondie une fois après pondération. Le rendement sur cash engagé reste non applicable pour un cash engagé nul.
 
 La CLV brute vaut `cote prise / cote clôture − 1`. La valeur face à une référence sans marge vaut `cote prise × probabilité clôture de référence − 1`. Ces métriques restent distinctes. L’appelant doit fournir des marchés, règles, lignes et clôtures comparables et horodatées. Une cote de clôture est exclue des décisions antérieures.
 
@@ -78,6 +82,10 @@ Le calcul reconstruit les positions, les mises, les retours et les frais des tic
 L’éligibilité exige un profil actif et un segment actif dont les règles ont été figées au plus tard au début de sa validation. Le pronostic doit avoir été observé pendant cette période ; une spécialité sélectionnée rétrospectivement n’est pas présentée comme validée. Le moteur v1 couvre les simples pré-match ouverts, avec identité d’événement, marché, sélection et règles explicites.
 
 Le dernier relevé connu doit avoir été observé après publication, enregistré avant la décision, être hors clôture, comparable, disponible et suffisamment récent. Un relevé plus récent signalant l’indisponibilité prime sur un ancien relevé disponible. La fraîcheur limite est inclusive. Le seuil éventuel de cote est attribué au tipster et n’est pas présenté comme un seuil de rentabilité. L’absence de pronostics éligibles est un résultat normal.
+
+`assessQuote` centralise ces contrôles pour le radar, les décisions et les scénarios historiques. Pour un relevé fournisseur, la fraîcheur tient également compte de sa mise à jour de prix et de la politique PRISME, en retenant la limite la plus stricte. L’observation correspond à la collecte effective, l’enregistrement à la persistance ; la mise à jour fournisseur est conservée séparément. Le cache ne modifie aucune de ces dates. Le premier relevé utilisé pour le délai de reproductibilité doit lui aussi être comparable et confirmé ; l’historique brut conserve les relevés ambigus.
+
+Si deux identifiants locaux d’événement renvoient au même événement fournisseur confirmé et qu’un ticket est déjà ouvert, la décision est suspendue jusqu’au rapprochement des identifiants. Les historiques ne sont pas réécrits automatiquement pour contourner un plafond d’exposition.
 
 Les trois méthodes utilisent le même capital, défini plus haut. Un panier est traité dans l’ordre des candidats fourni, conservé pour la reproductibilité. La mise est le minimum de la fraction ou mise théorique, du cash restant, du plafond par pari, du reliquat par événement, du reliquat d’exposition globale et des budgets de pertes.
 

@@ -64,10 +64,12 @@ La sauvegarde contient les deux espaces, les tickets, les versions, le journal e
 
 ## Sources externes et limites
 
-Les flux automatiques Bet Analytix, The Odds API et le compte Winamax **ne sont pas connectés**. La couverture Winamax France actuelle et les droits de collecte n’ont pas pu être vérifiés sur leurs pages officielles, bloquées par le réseau de cet environnement. Les sources officielles accessibles et les prérequis sont documentés dans [CONNECTORS.md](docs/CONNECTORS.md). Aucune souscription payante ni collecte automatisée de compte n’a été réalisée.
+L’adaptateur **The Odds API v4** cible `winamax_fr` et collecte à la demande, avec confirmation des correspondances et conservation des horodatages, quotas et indisponibilités. Configurer `ODDS_API_KEY` côté serveur pour l’utiliser ; aucune clé n’est fournie avec le projet. Sans clé ou en cas d’erreur, les relevés manuels restent disponibles. Le connecteur n’appelle jamais le fournisseur depuis la démonstration. L’identifiant Winamax France est confirmé dans la documentation officielle ; la couverture réelle dépend du sport, du marché et du forfait. Voir [CONNECTORS.md](docs/CONNECTORS.md).
+
+Bet Analytix et le compte Winamax restent sans synchronisation automatique. Aucune souscription payante ni collecte de compte joueur n’a été réalisée.
 
 Cette version gère un portefeuille cash personnel global et ses affectations à des stratégies. Elle ne comporte pas de modèle prédictif validé, de notifications automatiques, d’OCR PDF/capture ou de comptes multi-utilisateurs. Les simulations historiques ne démontrent pas un avantage, et leurs hypothèses/couvertures restent visibles. Les extensions et limites détaillées sont dans [LIMITATIONS.md](docs/LIMITATIONS.md).
 
-Analyse et qualification : [TIPSTER_ANALYSIS.md](docs/TIPSTER_ANALYSIS.md). Spécification : [SPEC.md](SPEC.md).
+Analyse et qualification : [TIPSTER_ANALYSIS.md](docs/TIPSTER_ANALYSIS.md). Radar et espérance : [RADAR.md](docs/RADAR.md). Spécification : [SPEC.md](SPEC.md).
 
 Conventions : [CALCULATIONS.md](docs/CALCULATIONS.md) · [IMPORTS.md](docs/IMPORTS.md) · [ARCHITECTURE.md](docs/ARCHITECTURE.md) · [REQUIREMENTS.md](docs/REQUIREMENTS.md).

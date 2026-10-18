@@ -6,6 +6,8 @@ import {allocate,bankroll} from '../src/domain/calculations';
 import type {AuditEntry,ImportBatch,Pick,Quote,Strategy,Ticket,Tipster} from '../src/domain/types';
 import { ANALYSIS_DEMO_VERSION } from '../src/server/demo-analysis';
 import type {ImportPreview} from '../src/server/imports';
+import type {OddsSyncResult} from '../src/connectors/types';
+import {readOddsConnectorStatus} from '../src/connectors/registry';
 
 const iso=(hours:number)=>new Date(Date.now()+hours*3600000).toISOString();
 async function act<T>(action:string,payload:unknown):Promise<T>{return await executeAction('personal',action,payload) as T;}
@@ -25,6 +27,75 @@ beforeEach(clearTestDatabase);
 afterAll(closeDatabase);
 
 describe('service transactionnel PostgreSQL',()=>{
+  it('synchronisation des cotes : absence de clé et démonstration restent sans réseau et sans argent', async () => {
+    const fetchMock = vi.fn(() => Promise.reject(new Error('Aucun réseau attendu')));
+    vi.stubEnv('ODDS_API_KEY', '');
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const profile = await tipster();
+      const pick = await act<Pick>('pick.save', { tipsterId: profile.id, event: 'Paris — Lyon', sport: 'Football', market: 'Vainqueur', selection: 'Paris', rules: 'Temps réglementaire', odds: 2, publishedAt: iso(-1), startsAt: iso(3) });
+      const result = await act<OddsSyncResult>('odds.sync', { pickId: pick.id });
+      expect(result.status).toBe('unconfigured');
+      const personal = await readState('personal');
+      expect(personal.audit.filter(entry => entry.action === 'odds.sync')).toHaveLength(1);
+      expect(personal.quotes).toHaveLength(0);
+      expect(personal.ledger).toHaveLength(0);
+      expect(personal.tickets).toHaveLength(0);
+      const demo = await seedDemo();
+      const demoResult = await executeAction('demo', 'odds.sync', { pickId: demo.picks[0].id }) as OddsSyncResult;
+      expect(demoResult.status).toBe('demo');
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect((await readState('demo')).quotes).toEqual(demo.quotes);
+      expect(readOddsConnectorStatus(personal, { apiKeyConfigured: false }).status).toBe('unconfigured');
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
+  });
+  it('synchronisation des cotes : confirmation humaine, cache immuable et quota audité sans exécution', async () => {
+    const sportKey = 'soccer_france_ligue_one';
+    const startsAt = iso(3);
+    const providerUpdatedAt = new Date(Date.now() - 5 * 60000).toISOString();
+    const publishedAt = new Date(Date.now() - 2 * 60000).toISOString();
+    const fixture = [{ id: 'provider-event-1', sport_key: sportKey, sport_title: 'Ligue 1', commence_time: startsAt, home_team: 'Paris', away_team: 'Lyon', bookmakers: [{ key: 'winamax_fr', title: 'Winamax (FR)', last_update: providerUpdatedAt, markets: [{ key: 'h2h', last_update: providerUpdatedAt, outcomes: [{ name: 'Paris', price: 2.1 }, { name: 'Lyon', price: 3 }] }] }] }];
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      const body = url.pathname.endsWith('/odds/') ? fixture : [{ key: sportKey, title: 'Ligue 1', group: 'Soccer', active: true }];
+      return new Response(JSON.stringify(body), { headers: { 'x-requests-remaining': '97', 'x-requests-used': '3', 'x-requests-last': url.pathname.endsWith('/odds/') ? '3' : '0' } });
+    });
+    vi.stubEnv('ODDS_API_KEY', 'integration-fixture-only');
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const profile = await tipster();
+      const pick = await act<Pick>('pick.save', { tipsterId: profile.id, event: 'Paris — Lyon', sport: 'Football', market: 'Vainqueur', selection: 'Paris', rules: 'Temps réglementaire', odds: 2, publishedAt, startsAt });
+      const preview = await act<OddsSyncResult>('odds.sync', { pickId: pick.id, sportKey });
+      expect(preview.status).toBe('needs_mapping');
+      expect((await readState('personal')).quotes).toHaveLength(0);
+      const candidate = preview.candidates.find(item => item.outcomeName === 'Paris')!;
+      expect(candidate.canConfirm).toBe(true);
+      const confirmed = await act<OddsSyncResult>('odds.sync', { pickId: pick.id, sportKey, candidateId: candidate.id, confirmMatch: true });
+      expect(confirmed.status).toBe('updated');
+      const repeated = await act<OddsSyncResult>('odds.sync', { pickId: pick.id });
+      expect(repeated.status).toBe('unchanged');
+      expect(repeated.quoteId).toBe(confirmed.quoteId);
+      expect(repeated.cached).toBe(true);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      const state = await readState('personal');
+      expect(state.quotes).toHaveLength(1);
+      expect(state.quotes[0]).toMatchObject({ collectionMode: 'provider', mappingStatus: 'confirmed', providerLastUpdatedAt: providerUpdatedAt, observedAt: candidate.collectedAt, identitySnapshot: { event: pick.event, startsAt }, provider: { bookmakerKey: 'winamax_fr', eventId: 'provider-event-1' } });
+      expect(Date.parse(state.quotes[0].providerLastUpdatedAt!)).toBeLessThan(Date.parse(pick.publishedAt));
+      expect(Date.parse(state.quotes[0].observedAt)).toBeGreaterThanOrEqual(Date.parse(pick.publishedAt));
+      expect(Date.parse(state.quotes[0].recordedAt)).toBeGreaterThanOrEqual(Date.parse(state.quotes[0].observedAt));
+      expect(state.audit.filter(entry => entry.action === 'odds.sync')).toHaveLength(3);
+      expect(readOddsConnectorStatus(state, { apiKeyConfigured: true })).toMatchObject({ status: 'unchanged', quota: { remaining: 97, used: 3, last: 3 } });
+      expect(state.tickets).toHaveLength(0);
+      expect(state.ledger).toHaveLength(0);
+      expect(JSON.stringify(state)).not.toContain('integration-fixture-only');
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
+  });
   it('isole la démonstration, conserve le personnel vide et rend le seed idempotent',async()=>{
     const first=await seedDemo();const second=await seedDemo();const personal=await readState('personal');
     expect(first.picks.length).toBeGreaterThan(85);expect(second.picks).toHaveLength(first.picks.length);expect(second.ledger.length).toBe(first.ledger.length);expect(personal.picks).toHaveLength(0);expect(personal.ledger).toHaveLength(0);

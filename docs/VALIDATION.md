@@ -69,3 +69,25 @@ Les tests de service et de démonstration vérifient l’enrichissement d’une 
 La démonstration enrichie compte **8 profils, 241 pronostics et 13 tickets fictifs**. Les captures exclues de Git sont `test-results/tipsters-analysis-desktop.png`, `specialties-analysis-desktop.png`, `tipsters-analysis-mobile.png` et `specialties-analysis-mobile.png`. Elles ont été inspectées ; aucun débordement horizontal de page ni erreur JavaScript n’a été détecté. Les tableaux larges défilent dans leur propre conteneur.
 
 Le contrôle Chromium de ce complément est un parcours ciblé distinct des deux tests E2E de la recette initiale ; la suite E2E complète n’a pas été relancée. Aucun capital de tipster n’a été inventé pour afficher un drawdown en pourcentage : la mesure en unités est disponible, et le pourcentage par valeur de part reste explicitement non applicable lorsque ses flux propres manquent.
+
+## Complément — radar Winamax et espérance, sections 6 et 7
+
+Validation exécutée le **18 octobre 2026**.
+
+| Contrôle | Résultat |
+| --- | --- |
+| `npm test` | **115 tests réussis**, 8 fichiers, aucun test ignoré |
+| `npm run typecheck` | Réussi après correction du typage des événements de formulaire |
+| `npm run build` | Build de production et vérification TypeScript réussis ; route authentifiée `/api/connectors` incluse |
+| Chromium ciblé | Radar et fiche de décision vérifiés sur ordinateur 1440 × 1000 et mobile 390 × 844, sans erreur JavaScript ni débordement |
+| Espérance dans l’interface | Sans probabilité : « espérance inconnue » ; hypothèse 55 %, cote 2,00 et mise 10 € : **+1 €** et grille de sensibilité |
+| Repli sans configuration | Statut sans clé, route protégée, démonstration sans appel fournisseur ; données personnelles inchangées |
+| Marché complet dans l’interface | Confirmation obligatoire, normalisation 2,00/2,00 à 50 %/50 %, confirmation réinitialisée après changement de cote |
+
+Les nouveaux tests du radar et de l’espérance couvrent les probabilités absentes/invalides, la provenance manuelle/marché/modèle, l’arrondi au centime, les bornes 0 et 1, les marchés complets et les états nets. Ils vérifient aussi la première cote comparable, les deux horodatages et la date de prix fournisseur, le TTL PRISME, les lignes/règles, les six statuts, les dossiers conservés et les alias d’un événement déjà exposé. Des régressions vérifient ces mêmes contrôles dans les simulations et le backtest.
+
+Les **15 tests du transport et des correspondances** utilisent des réponses v4 fictives injectées : ciblage exclusif `winamax_fr`, absence de substitution de date, cache sans rajeunissement, quota nul, 429, reprises bornées, délais, erreurs sans clé exposée, confirmation humaine, lignes et totaux contradictoires, prix anciens/futurs et priorité du candidat exact avant troncature. Deux tests PostgreSQL supplémentaires vérifient persistance, déduplication, audit des quotas et absence de ticket ou de mouvement financier créé par une collecte.
+
+Les captures exclues de Git sont `test-results/radar-odds-desktop.png`, `radar-odds-mobile.png`, `decision-ev-desktop.png` et `decision-ev-mobile.png`. Le parcours utilise exclusivement des données fictives dans la démonstration et compare les volumes personnels avant/après.
+
+La documentation officielle actuelle confirme `winamax_fr` ; les pages et le contrat vérifiés sont référencés dans [CONNECTORS.md](CONNECTORS.md). **La clé `ODDS_API_KEY` est absente : aucune collecte authentifiée de cotes réelles n’a été exécutée.** La couverture et les règles du forfait doivent encore être vérifiées lors de la recette avec une clé configurée. La suite E2E complète initiale n’a pas été relancée pour ce complément.
