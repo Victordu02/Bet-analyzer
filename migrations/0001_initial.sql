@@ -1,0 +1,15 @@
+CREATE TABLE IF NOT EXISTS workspaces (id text PRIMARY KEY CHECK (id IN ('personal','demo')));
+INSERT INTO workspaces(id) VALUES ('personal'),('demo') ON CONFLICT DO NOTHING;
+CREATE TABLE IF NOT EXISTS tipsters (workspace text NOT NULL REFERENCES workspaces(id), id text NOT NULL, document jsonb NOT NULL, PRIMARY KEY(workspace,id));
+CREATE TABLE IF NOT EXISTS picks (workspace text NOT NULL REFERENCES workspaces(id), id text NOT NULL, document jsonb NOT NULL, tipster_id text GENERATED ALWAYS AS (document->>'tipsterId') STORED NOT NULL, PRIMARY KEY(workspace,id), FOREIGN KEY(workspace,tipster_id) REFERENCES tipsters(workspace,id));
+CREATE TABLE IF NOT EXISTS quotes (workspace text NOT NULL REFERENCES workspaces(id), id text NOT NULL, document jsonb NOT NULL, pick_id text GENERATED ALWAYS AS (document->>'pickId') STORED NOT NULL, PRIMARY KEY(workspace,id), FOREIGN KEY(workspace,pick_id) REFERENCES picks(workspace,id));
+CREATE TABLE IF NOT EXISTS strategies (workspace text NOT NULL REFERENCES workspaces(id), id text NOT NULL, document jsonb NOT NULL, PRIMARY KEY(workspace,id));
+CREATE TABLE IF NOT EXISTS tickets (workspace text NOT NULL REFERENCES workspaces(id), id text NOT NULL, document jsonb NOT NULL, pick_id text GENERATED ALWAYS AS (document->>'pickId') STORED, strategy_id text GENERATED ALWAYS AS (document->>'strategyId') STORED, PRIMARY KEY(workspace,id), FOREIGN KEY(workspace,pick_id) REFERENCES picks(workspace,id), FOREIGN KEY(workspace,strategy_id) REFERENCES strategies(workspace,id));
+CREATE TABLE IF NOT EXISTS ledger (workspace text NOT NULL REFERENCES workspaces(id), id text NOT NULL, document jsonb NOT NULL, ticket_id text GENERATED ALWAYS AS (document->>'ticketId') STORED, PRIMARY KEY(workspace,id), FOREIGN KEY(workspace,ticket_id) REFERENCES tickets(workspace,id), CHECK(jsonb_typeof(document->'amountCents')='number'), CHECK((document->>'amountCents')::numeric=trunc((document->>'amountCents')::numeric)));
+CREATE TABLE IF NOT EXISTS simulations (workspace text NOT NULL REFERENCES workspaces(id), id text NOT NULL, document jsonb NOT NULL, PRIMARY KEY(workspace,id));
+CREATE TABLE IF NOT EXISTS imports (workspace text NOT NULL REFERENCES workspaces(id), id text NOT NULL, document jsonb NOT NULL, PRIMARY KEY(workspace,id));
+CREATE TABLE IF NOT EXISTS audit (workspace text NOT NULL REFERENCES workspaces(id), id text NOT NULL, document jsonb NOT NULL, PRIMARY KEY(workspace,id));
+CREATE TABLE IF NOT EXISTS settings (workspace text NOT NULL REFERENCES workspaces(id), id text NOT NULL, document jsonb NOT NULL, PRIMARY KEY(workspace,id));
+CREATE UNIQUE INDEX IF NOT EXISTS picks_source_identity ON picks (workspace,(document->>'tipsterId'),(document->>'sourceId')) WHERE COALESCE(document->>'sourceId','') <> '';
+CREATE UNIQUE INDEX IF NOT EXISTS tickets_source_identity ON tickets (workspace,(document->>'bookmaker'),(document->>'sourceId')) WHERE COALESCE(document->>'sourceId','') <> '';
+CREATE UNIQUE INDEX IF NOT EXISTS import_hash_identity ON imports (workspace,(document->>'kind'),(document->>'hash'));

@@ -1,0 +1,3 @@
+source_id;event;event_key;market;selection;line;rules;kind;bookmaker;odds;stake;funding;placed_at;result;return;fee;settled_at;source;notes
+FICTIF-T-001;Équipe Azur - Équipe Ocre;fictif-azur-ocre-2026-09-01;1X2;Équipe Azur;;Temps réglementaire;single;Winamax FR;2,50;20,00;cash;01/09/2026 18:00;won;50,00;0;01/09/2026 22:00;Ticket fictif CSV;DONNÉE FICTIVE À IMPORTER DANS LA DÉMONSTRATION
+FICTIF-T-002;Équipe Jade - Équipe Ambre;fictif-jade-ambre-2026-09-02;1X2;Équipe Jade;;Temps réglementaire;single;Winamax FR;3,00;10,00;freebet;02/09/2026 18:00;won;20,00;0;02/09/2026 22:00;Ticket fictif CSV;DONNÉE FICTIVE À IMPORTER DANS LA DÉMONSTRATION
