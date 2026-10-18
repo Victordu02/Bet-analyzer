@@ -44,3 +44,5 @@ Prérequis : projet Vercel privé et fournisseur PostgreSQL managé choisis, ave
 - [ ] Documenter les variables, migrations, opérations, coûts et limites ; effectuer une recette privée avant ouverture de l’instance.
 
 Critère de fin : une instance privée HTTPS conserve durablement les données et les accès, dispose d’une restauration vérifiée et fonctionne sans dépendre du disque ni des processus PostgreSQL de l’environnement local.
+
+- [x] Branche main initialisée
