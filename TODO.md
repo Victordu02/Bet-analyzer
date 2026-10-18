@@ -46,3 +46,18 @@ Prérequis : projet Vercel privé et fournisseur PostgreSQL managé choisis, ave
 Critère de fin : une instance privée HTTPS conserve durablement les données et les accès, dispose d’une restauration vérifiée et fonctionne sans dépendre du disque ni des processus PostgreSQL de l’environnement local.
 
 - [x] Branche main initialisée
+
+## 4. Analyse et qualification des tipsters — sections 4 et 5
+
+- [x] Ajouter `SPEC.md` comme point d’entrée vers la spécification complète conservée dans `docs/REQUIREMENTS.md`.
+- [x] Comparer le P&L aux mises déclarées au résultat à mise constante de 1 unité par ticket, combinés standard inclus une seule fois.
+- [x] Présenter rendements, volumes, événements, périodes, cotes, dispersion, drawdown en unités, concentration des gains et incertitude descriptive, sans score global opaque.
+- [x] Séparer les populations Déclaré, Observé avant événement, Simulé sur Winamax et Exécuté ; conserver les profils perdants ou inactifs.
+- [x] Analyser les sept axes de spécialités avec bornes explicites, filtres combinables et journal persistant des variantes volontairement consignées.
+- [x] Séparer découverte connue à sa date de coupure et validation prospective après gel ; reconstruire les révisions pour éviter les corrections et résultats futurs.
+- [x] Enrichir les vues Tipsters, les fiches et Spécialités avec tableaux triables, graphiques interactifs et sources consultables, sur ordinateur et mobile.
+- [x] Enrichir la démonstration de façon versionnée et idempotente : quatre profils supplémentaires, 156 pronostics fictifs, observations de découverte/validation et tickets séparés des simulations.
+- [x] Valider `npm test` (**78 tests**, dont 18 nouveaux tests du moteur d’analyse), `npm run typecheck` et `npm run build`. Contrôle Chromium ciblé des deux vues, des deux formats d’écran et de l’enregistrement d’une variante réussi ; espace personnel inchangé.
+- [ ] Si des données de capital et de flux propres aux bankrolls publiques deviennent disponibles, les modéliser pour calculer leur valeur de part et leur drawdown en pourcentage. En attendant, afficher explicitement « non applicable » par profil ; ne pas attribuer les flux du portefeuille personnel à chaque tipster.
+
+Conventions et limites : [TIPSTER_ANALYSIS.md](docs/TIPSTER_ANALYSIS.md) et [CALCULATIONS.md](docs/CALCULATIONS.md).

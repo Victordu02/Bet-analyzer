@@ -48,3 +48,24 @@ L’espace personnel de l’installation livrée a été vérifié **vide** : 0 
 Ces vérifications démontrent le fonctionnement local de l’application et la cohérence des cas testés. Elles ne démontrent aucune stratégie rentable, couverture sportive d’un fournisseur, synchronisation de compte Winamax, qualité d’une future donnée externe ou validation d’un modèle prédictif.
 
 Le brouillon cloud sauvegarde `install_script`, `start_skill` et six domaines documentaires. Sa sauvegarde ne publie pas l’environnement et n’établit pas la restauration dans une future tâche. Les étapes de publication restent dans l’interface de l’environnement.
+
+## Complément — analyse et qualification des tipsters, sections 4 et 5
+
+Validation exécutée le **18 octobre 2026** après l’ajout du moteur `tipster-analysis.ts`, des vues, des variantes auditées et de l’enrichissement de démonstration.
+
+| Contrôle | Résultat |
+| --- | --- |
+| `npm test` | **78 tests réussis**, 6 fichiers, aucun test ignoré |
+| `npm run typecheck` | Réussi sans erreur |
+| `npm run build` | Build de production et vérification TypeScript réussis |
+| Chromium ciblé, vues Tipsters et Spécialités | Réussi sur ordinateur 1440 × 1000 et mobile 390 × 844, thème sombre mobile |
+| Enregistrement d’une variante par l’interface | Variante ajoutée à l’audit de démonstration et bouton de confirmation vérifié |
+| Données personnelles | Effectifs pronostics, tickets, journal et audit identiques avant/après le parcours de démonstration |
+
+Les **18 nouveaux tests du moteur d’analyse** couvrent la pondération déclarée distincte du résultat à une unité, les combinés à mise unique, les annulations, les catégories exclues, les données vides ou insuffisantes, la concentration et la dispersion, les règlements simultanés et le bootstrap par événement. Ils vérifient aussi les quatre preuves, l’absence de mélange de scénarios, les cotes réellement connues, les retours et frais réels distincts de la référence à une unité, les sept axes et les révisions temporelles des périodes de découverte/validation.
+
+Les tests de service et de démonstration vérifient l’enrichissement d’une installation déjà initialisée, l’idempotence, les collisions sans écrasement, l’isolation personnelle, les variantes auditées, les bornes de filtres et la conservation de l’observation initiale après correction de classification.
+
+La démonstration enrichie compte **8 profils, 241 pronostics et 13 tickets fictifs**. Les captures exclues de Git sont `test-results/tipsters-analysis-desktop.png`, `specialties-analysis-desktop.png`, `tipsters-analysis-mobile.png` et `specialties-analysis-mobile.png`. Elles ont été inspectées ; aucun débordement horizontal de page ni erreur JavaScript n’a été détecté. Les tableaux larges défilent dans leur propre conteneur.
+
+Le contrôle Chromium de ce complément est un parcours ciblé distinct des deux tests E2E de la recette initiale ; la suite E2E complète n’a pas été relancée. Aucun capital de tipster n’a été inventé pour afficher un drawdown en pourcentage : la mesure en unités est disponible, et le pourcentage par valeur de part reste explicitement non applicable lorsque ses flux propres manquent.

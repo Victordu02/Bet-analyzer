@@ -1,9 +1,10 @@
-import {beforeAll,beforeEach,afterAll,describe,expect,it} from 'vitest';
+import {beforeAll,beforeEach,afterAll,describe,expect,it,vi} from 'vitest';
 import {readFile} from 'node:fs/promises';
 import {getPool,closeDatabase} from '../src/db';
 import {executeAction,readState,restoreState,seedDemo} from '../src/server/service';
 import {allocate,bankroll} from '../src/domain/calculations';
-import type {ImportBatch,Pick,Quote,Strategy,Ticket,Tipster} from '../src/domain/types';
+import type {AuditEntry,ImportBatch,Pick,Quote,Strategy,Ticket,Tipster} from '../src/domain/types';
+import { ANALYSIS_DEMO_VERSION } from '../src/server/demo-analysis';
 import type {ImportPreview} from '../src/server/imports';
 
 const iso=(hours:number)=>new Date(Date.now()+hours*3600000).toISOString();
@@ -26,7 +27,8 @@ afterAll(closeDatabase);
 describe('service transactionnel PostgreSQL',()=>{
   it('isole la démonstration, conserve le personnel vide et rend le seed idempotent',async()=>{
     const first=await seedDemo();const second=await seedDemo();const personal=await readState('personal');
-    expect(first.picks).toHaveLength(85);expect(second.picks).toHaveLength(85);expect(second.ledger.length).toBe(first.ledger.length);expect(personal.picks).toHaveLength(0);expect(personal.ledger).toHaveLength(0);
+    expect(first.picks.length).toBeGreaterThan(85);expect(second.picks).toHaveLength(first.picks.length);expect(second.ledger.length).toBe(first.ledger.length);expect(personal.picks).toHaveLength(0);expect(personal.ledger).toHaveLength(0);
+    expect(second.audit.filter(entry => entry.action === ANALYSIS_DEMO_VERSION)).toHaveLength(1);
     await expect(executeAction('personal','demo.seed',{})).rejects.toThrow('isolée');
     await expect(act('pick.save',{tipsterId:first.tipsters[0].id,event:'Test',market:'V',selection:'A',odds:2,publishedAt:iso(-1),startsAt:iso(2)})).rejects.toThrow('dans cet espace');
   });
@@ -116,5 +118,72 @@ describe('service transactionnel PostgreSQL',()=>{
     const t=await tipster();const data={tipsterId:t.id,event:'Règlement avant début',market:'Vainqueur',selection:'A',odds:2,publishedAt:iso(-4),startsAt:iso(-1),settledAt:iso(-2),settlementSource:'Justificatif déclaré'};
     for(const result of ['won','lost','void'])await expect(act('pick.save',{...data,result})).rejects.toThrow('début de l’événement');
     const cashout=await act<Pick>('pick.save',{...data,result:'cashout'});expect(cashout.result).toBe('cashout');expect((await readState('personal')).picks).toHaveLength(1);
+  });
+  it('consigne chaque variante explorée sans effacer les hypothèses antérieures et valide son contexte', async () => {
+    const profile = await tipster();
+    const payload = { name: 'Basket live à observer', proof: 'declared', filter: { tipsterId: profile.id, sport: 'Basketball', timing: 'live', delayMinMinutes: -30, delayMaxMinutes: 0 }, axis: 'delay', phase: 'discovery', discoveryEnd: iso(-24) };
+    const first = await act<AuditEntry>('analysis.explore', payload);
+    const second = await act<AuditEntry>('analysis.explore', { ...payload, name: 'Résultat non retenu', filter: { ...payload.filter, oddsMin: 1, oddsMax: 1.5 } });
+    expect(second.id).not.toBe(first.id);
+    const history = (await readState('personal')).audit.filter(entry => entry.action === 'analysis.explore');
+    expect(history).toHaveLength(2);
+    expect(JSON.parse(history.find(entry => entry.id === first.id)!.detail)).toMatchObject({ schemaVersion: 1, ...payload });
+    await expect(act('analysis.explore', { ...payload, proof: 'validated' })).rejects.toThrow('Niveau de preuve');
+    await expect(act('analysis.explore', { ...payload, proof: '' })).rejects.toThrow('Niveau de preuve');
+    await expect(act('analysis.explore', { ...payload, filter: { kind: ['single'] } })).rejects.toThrow('textuel');
+    await expect(act('analysis.explore', { ...payload, filter: { oddsMin: 2, oddsMax: 1.5 } })).rejects.toThrow('borne haute');
+    await expect(act('analysis.explore', { ...payload, filter: { confidence: 99 } })).rejects.toThrow('Filtre inconnu');
+    await expect(act('analysis.explore', { ...payload, simulationId: 'other-workspace' })).rejects.toThrow('dans cet espace');
+    expect((await readState('personal')).audit.filter(entry => entry.action === 'analysis.explore')).toHaveLength(2);
+  });
+  it('fige un segment live avec délai négatif et refuse les intervalles vides', async () => {
+    const profile = await tipster();
+    const payload = { name: 'Live entre zéro et trente minutes', filter: { tipsterId: profile.id, timing: 'live', delayMinMinutes: -30, delayMaxMinutes: 0, oddsMin: 1, oddsMax: 1.5 }, discoveryEnd: iso(-24), validationStart: iso(1) };
+    const strategy = await act<Strategy>('strategy.save', payload);
+    expect(strategy.filter).toEqual(payload.filter);
+    await expect(act('strategy.save', { ...payload, filter: { delayMinMinutes: 0, delayMaxMinutes: 0 } })).rejects.toThrow('strictement');
+    await expect(act('strategy.save', { ...payload, filter: { oddsMin: 2, oddsMax: 2 } })).rejects.toThrow('strictement');
+    expect((await readState('personal')).strategies).toHaveLength(1);
+  });
+  it('déclasse le segment corrigé après événement tout en conservant son observation originale', async () => {
+    const profile = await tipster();
+    const pick = await act<Pick>('pick.save', { tipsterId: profile.id, event: 'Preuve de segment', sport: 'Football', competition: 'Coupe', market: 'Vainqueur', selection: 'A', odds: 2, publishedAt: iso(-1), startsAt: iso(1) });
+    expect(pick.evidence).toBe('observed');
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(Date.parse(pick.startsAt) + 4 * 3600000));
+    try {
+      const corrected = await act<Pick>('pick.save', { id: pick.id, sport: 'Basketball', competition: 'Autre coupe' });
+      expect(corrected.evidence).toBe('declared');
+      expect(corrected.revisions[0].previous.evidence).toBe('observed');
+      expect(corrected.revisions[0].previous.sport).toBe('Football');
+      expect(corrected.initialContent).toBe(pick.initialContent);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it('enrichit une ancienne démonstration sans remplacer ses données ni toucher au personnel', async () => {
+    const complete = await seedDemo();
+    const legacy = structuredClone(complete);
+    for (const name of ['tipsters', 'picks', 'quotes', 'tickets', 'ledger', 'strategies', 'simulations', 'audit'] as const) {
+      (legacy[name] as { id: string }[]) = legacy[name].filter(record => !record.id.startsWith('demo-analysis-v2'));
+    }
+    legacy.tipsters[0].notes = 'Annotation utilisateur conservée lors de la mise à niveau';
+    legacy.settings.paused = true;
+    legacy.settings.maxBetPercent = 0.005;
+    await clearTestDatabase();
+    await restoreState(legacy);
+    const personalTipster = await tipster();
+    await initial();
+    const personalBefore = await readState('personal');
+    const before = await readState('demo');
+    const upgraded = await seedDemo();
+    expect(upgraded.picks.length).toBeGreaterThan(before.picks.length);
+    expect(upgraded.settings).toEqual(before.settings);
+    for (const name of ['tipsters', 'picks', 'quotes', 'tickets', 'ledger', 'strategies', 'simulations', 'audit'] as const) {
+      for (const original of before[name]) expect(upgraded[name].find(record => record.id === original.id)).toEqual(original);
+    }
+    expect(await readState('personal')).toEqual(personalBefore);
+    expect(personalBefore.tipsters[0].id).toBe(personalTipster.id);
+    expect((await seedDemo()).picks).toHaveLength(upgraded.picks.length);
   });
 });

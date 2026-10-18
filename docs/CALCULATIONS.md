@@ -1,12 +1,24 @@
 # Conventions financières et statistiques
 
-Toutes les fonctions déterministes sont dans `src/domain/calculations.ts`. Les tests ciblés se lancent avec `npm test -- src/domain/calculations.test.ts`. Les ratios utilisent des fractions : `0.10` signifie 10 %. Les montants comptables sont des centimes entiers sûrs JavaScript ; les multiplications monétaires et arrondis utilisent Decimal. Une mise est arrondie vers le bas au centime. Une espérance monétaire affichée est également arrondie vers le bas au centime ; ce n’est pas un montant encaissé.
+Les fonctions déterministes sont dans `src/domain/calculations.ts`, `src/domain/tipster-analysis.ts` et `src/domain/backtest.ts`. Les tests ciblés du classement et des spécialités se lancent avec `npm test -- src/domain/tipster-analysis.test.ts`. Les ratios utilisent des fractions : `0.10` signifie 10 %. Les montants comptables sont des centimes entiers sûrs JavaScript ; les multiplications monétaires et arrondis utilisent Decimal. Une mise est arrondie vers le bas au centime. Une espérance monétaire affichée est également arrondie vers le bas au centime ; ce n’est pas un montant encaissé.
+
+## Classement et spécialités des tipsters
+
+`tipster-analysis.ts` fournit les populations séparées par niveau de preuve, le classement et les comparaisons découverte/validation. Les conventions et le parcours utilisateur sont détaillés dans [TIPSTER_ANALYSIS.md](TIPSTER_ANALYSIS.md).
+
+Le classement à une unité inclut les simples et les combinés standard réglés, en comptant une seule mise par ticket. Le rendement est le résultat total à une unité / le nombre de tickets standard réglés, annulations comprises. Le P&L aux mises déclarées est recalculé avec les mises de la source, distinct du résultat à une unité. Les demi-règlements, cashouts et promotions sont séparés de cette population standard. Le montant réel d’un ticket exécuté utilise ses retours, mises et frais enregistrés ; sa référence à une unité reste une comparaison distincte.
+
+Les périodes d’historique et d’observation ne sont pas interchangeables. Un import rétrospectif conserve sa date d’observation réelle. Une validation prospective exige un gel des règles antérieur à la période et une observation cohérente avant événement ; les résultats postérieurs à la fin de découverte ne sont pas réinjectés dans le rendement connu à cette date.
+
+Le drawdown à une unité regroupe les règlements au même instant avant de mesurer la baisse depuis un sommet. Le pourcentage par valeur de part d’un profil reste non applicable faute de capital et de flux propres documentés. L’indice de la bankroll personnelle, décrit plus bas, continue de neutraliser ses apports et retraits.
+
+Les paragraphes suivants décrivent aussi `pickStats`, utilisé par les rapports historiques et certains écrans existants. Son périmètre reste limité aux simples standard et ne doit pas être confondu avec le nouveau classement explicite incluant les combinés.
 
 ## Preuve, catégories et population des indicateurs
 
 Les pronostics déclarés et les observations antérieures à l’événement restent séparés. Le générateur de rapports vérifie en plus la cohérence des horodatages d’un enregistrement marqué observé. Il ne promeut jamais un historique déclaré. Une cote observée n’est ni une mise acceptée ni un ticket. Une simulation sauvegardée n’ajoute aucun mouvement comptable. Les données fictives appartiennent à un espace séparé.
 
-`normalizedProfit` applique une mise constante de 1 unité aux paris simples : gagné = cote − 1 ; perdu = −1 ; annulé = 0. La convention d’un demi-gagné est `(cote − 1)/2` et celle d’un demi-perdu `−0.5`, sous l’hypothèse explicite de deux demi-mises égales. Cashouts, combinés et paris ouverts n’ont pas de résultat standardisé retourné.
+`normalizedProfit` applique une mise constante de 1 unité par ticket : gagné = cote − 1 ; perdu = −1 ; annulé = 0. Un combiné standard utilise sa cote totale, pour une seule unité. Pour un simple, la convention d’un demi-gagné est `(cote − 1)/2` et celle d’un demi-perdu `−0.5`, sous l’hypothèse explicite de deux demi-mises égales. Cashouts et paris ouverts n’ont pas de résultat standardisé retourné ; un combiné à règlement partiel reste exclu.
 
 Les indicateurs principaux de `pickStats` incluent uniquement les **simples réglés gagnés, perdus ou annulés** avec une cote valide. Les demi-règlements, cashouts et combinés sont comptés comme exclus afin de ne pas mélanger leurs conventions. `count` et `events` décrivent toute la population fournie ; `settled`, le rendement et les cotes moyennes portent sur la population standard réglée. Un pari ouvert n’est pas un cas exclu mais ne contribue pas aux résultats.
 

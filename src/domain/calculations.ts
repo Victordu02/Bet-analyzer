@@ -17,15 +17,15 @@ const cashCost = (ticket: Ticket): number => ticket.funding === "cash" ? safeMon
 const isOpen = (ticket: Ticket): boolean => ticket.result === "open" || ticket.partialCashout;
 const openCost = (ticket: Ticket): number => isOpen(ticket) && ticket.funding === "cash" ? safeMoney(ticket.remainingStakeCents ?? ticket.stakeCents) : 0;
 
-/** One unit per simple ticket. Half settlements have an explicit convention; cashouts and accumulators need separate analysis. */
+/** One unit per ticket, including accumulators at their total ticket odds. Half settlements are supported only for singles. */
 export function normalizedProfit(pick: Pick): number | null {
-  if (pick.kind !== "single" || !validOdds(pick.odds)) return null;
+  if (!validOdds(pick.odds)) return null;
   switch (pick.result) {
     case "won": return D(pick.odds).minus(1).toNumber();
     case "lost": return -1;
     case "void": return 0;
-    case "half_won": return D(pick.odds).minus(1).div(2).toNumber();
-    case "half_lost": return -0.5;
+    case "half_won": return pick.kind === "single" ? D(pick.odds).minus(1).div(2).toNumber() : null;
+    case "half_lost": return pick.kind === "single" ? -0.5 : null;
     default: return null;
   }
 }

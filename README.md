@@ -68,4 +68,6 @@ Les flux automatiques Bet Analytix, The Odds API et le compte Winamax **ne sont 
 
 Cette version gère un portefeuille cash personnel global et ses affectations à des stratégies. Elle ne comporte pas de modèle prédictif validé, de notifications automatiques, d’OCR PDF/capture ou de comptes multi-utilisateurs. Les simulations historiques ne démontrent pas un avantage, et leurs hypothèses/couvertures restent visibles. Les extensions et limites détaillées sont dans [LIMITATIONS.md](docs/LIMITATIONS.md).
 
+Analyse et qualification : [TIPSTER_ANALYSIS.md](docs/TIPSTER_ANALYSIS.md). Spécification : [SPEC.md](SPEC.md).
+
 Conventions : [CALCULATIONS.md](docs/CALCULATIONS.md) · [IMPORTS.md](docs/IMPORTS.md) · [ARCHITECTURE.md](docs/ARCHITECTURE.md) · [REQUIREMENTS.md](docs/REQUIREMENTS.md).

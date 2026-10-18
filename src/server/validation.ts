@@ -128,7 +128,7 @@ export function buildPick(data:Record<string,unknown>, previous?:Pick, imported=
   if(!p.eventKey)p.eventKey=eventKey(p.event,p.startsAt);
   const observed=!imported&&p.timing==='prematch'&&p.publishedAt<=now&&p.startsAt>now&&p.result==='open';
   if(!previous){p.evidence=observed?'observed':'declared';p.initialContent=JSON.stringify({...p,revisions:undefined,initialContent:undefined});}
-  else if(['event','startsAt','publishedAt','market','selection','line','rules','odds','kind','timing'].some(key=>JSON.stringify(p[key as keyof Pick])!==JSON.stringify(previous[key as keyof Pick])))p.evidence='declared';
+  else if(['tipsterId','event','eventKey','sport','competition','startsAt','publishedAt','market','selection','line','rules','odds','minOdds','stakeUnits','kind','timing'].some(key=>JSON.stringify(p[key as keyof Pick])!==JSON.stringify(previous[key as keyof Pick])))p.evidence='declared';
   if(imported)p.evidence='declared';
   return p;
 }

@@ -10,6 +10,7 @@ import type {AppState,AuditEntry,ImportBatch,LedgerEntry,Pick,ProbabilitySource,
 import {allocate,matchesSegment} from '../domain/calculations';
 import {boolean,buildPick,buildTicket,date,enumValue,integer,number,object,text,validatePick,validateSettings,validateTicket} from './validation';
 import {importHash,importInput,previewImport,type ImportInput} from './imports';
+import {enrichAnalysisDemo} from './demo-analysis';
 
 const entityNames=['tipsters','picks','quotes','strategies','tickets','ledger','simulations','imports','audit'] as const;
 const appendOnly=new Set<string>(['ledger','imports','audit','simulations']);
@@ -139,11 +140,18 @@ function addLedger(state:AppState,data:Record<string,unknown>):LedgerEntry{
 }
 function saveStrategy(state:AppState,data:Record<string,unknown>,fictionalHistorical=false):Strategy{
   const previous=data.id?requireRef(state.strategies,text(data.id,'ID'),'Stratégie'):undefined;
-  const filter=object(data.filter??previous?.filter??{});
+  const filter={...object(data.filter??previous?.filter??{})};
   const allowed=new Set(['tipsterId','sport','competition','market','oddsMin','oddsMax','kind','timing','delayMinMinutes','delayMaxMinutes']);
-  for(const [key,value]of Object.entries(filter)){if(!allowed.has(key))throw new Error(`Filtre inconnu : ${key}`);if(['oddsMin','oddsMax','delayMinMinutes','delayMaxMinutes'].includes(key))filter[key]=number(value,key,0);else filter[key]=text(value,key,true);}
+  for(const [key,value]of Object.entries(filter)){
+    if(!allowed.has(key))throw new Error(`Filtre inconnu : ${key}`);
+    if(key==='delayMinMinutes'||key==='delayMaxMinutes')filter[key]=number(value,key);
+    else if(key==='oddsMin')filter[key]=number(value,key,1);
+    else if(key==='oddsMax')filter[key]=number(value,key,1.000001);
+    else filter[key]=text(value,key,true);
+  }
   if(filter.tipsterId)requireRef(state.tipsters,String(filter.tipsterId),'Tipster');
-  if(filter.oddsMin!=null&&filter.oddsMax!=null&&Number(filter.oddsMin)>Number(filter.oddsMax))throw new Error('Bornes de cotes inversées.');
+  if(filter.oddsMin!=null&&filter.oddsMax!=null&&Number(filter.oddsMin)>=Number(filter.oddsMax))throw new Error('La borne haute des cotes doit dépasser strictement la borne basse.');
+  if(filter.delayMinMinutes!=null&&filter.delayMaxMinutes!=null&&Number(filter.delayMinMinutes)>=Number(filter.delayMaxMinutes))throw new Error('La borne haute des délais doit dépasser strictement la borne basse.');
   if(filter.kind)enumValue(filter.kind,['single','accumulator'],'Type','single');if(filter.timing)enumValue(filter.timing,['prematch','live'],'Moment','prematch');
   const now=new Date().toISOString(),discoveryEnd=date(data.discoveryEnd??previous?.discoveryEnd,'Fin de découverte',false),validationStart=date(data.validationStart??previous?.validationStart,'Début de validation',false);
   if(discoveryEnd>=validationStart)throw new Error('La validation doit commencer strictement après la période de découverte.');
@@ -162,6 +170,65 @@ function saveSimulation(state:AppState,data:Record<string,unknown>){
   const candidates=raw.map(v=>{const c=object(v),pickId=text(c.pickId,'Pronostic',true),pick=requireRef(state.picks,pickId,'Pronostic');if(strategy&&!matchesSegment(pick,strategy.filter))throw new Error('Un candidat ne correspond pas à la stratégie figée.');const probability=c.probability==null||c.probability===''?null:number(c.probability,'Probabilité',0.000001,0.999999);const probabilitySource:ProbabilitySource|null=probability===null?null:enumValue<ProbabilitySource>(c.probabilitySource,['manual','market','model'],'Source de probabilité','manual');if(probabilitySource!==null&&probabilitySource!=='manual')throw new Error('Les probabilités de marché/modèle nécessitent une provenance évaluée non disponible dans cette version ; saisissez une hypothèse manuelle.');return {pickId,probability,probabilitySource};});
   const simulation={id:randomUUID(),name:text(data.name,'Nom',true,200),createdAt:new Date().toISOString(),strategyId,method,allocations:allocate(state,candidates,method),assumptions:'Simulation non exécutée. Cotes manuelles observées, limites et solde de cet instant ; aucune garantie de rendement ni de disponibilité future.',settingsSnapshot:structuredClone(state.settings)};
   state.simulations.push(simulation);audit(state,'simulation.save',simulation.id,'Allocation recalculée sur le serveur ; aucun mouvement financier');return simulation;
+}
+
+function recordExploration(state: AppState, data: Record<string, unknown>): AuditEntry {
+  const rawFilter = object(data.filter ?? {});
+  const filter: Record<string, string | number> = {};
+  const stringFields = new Set(['tipsterId', 'sport', 'competition', 'market']);
+  const numberFields = new Set(['oddsMin', 'oddsMax', 'delayMinMinutes', 'delayMaxMinutes']);
+
+  for (const [key, value] of Object.entries(rawFilter)) {
+    if (stringFields.has(key)) {
+      if (typeof value !== 'string') throw new Error(`Le filtre ${key} doit être textuel.`);
+      filter[key] = text(value, `Filtre ${key}`, true, 300);
+    } else if (numberFields.has(key)) {
+      if (typeof value !== 'number') throw new Error(`Le filtre ${key} doit être numérique.`);
+      filter[key] = number(value, `Filtre ${key}`, key === 'oddsMin' ? 1 : key === 'oddsMax' ? 1.000001 : -Number.MAX_SAFE_INTEGER);
+    } else if (key === 'kind') {
+      if (typeof value !== 'string') throw new Error('Le type de pari doit être textuel.');
+      filter.kind = enumValue(value, ['single', 'accumulator'], 'Type de pari', 'single');
+    } else if (key === 'timing') {
+      if (typeof value !== 'string') throw new Error('Le moment du pari doit être textuel.');
+      filter.timing = enumValue(value, ['prematch', 'live'], 'Avant-match ou live', 'prematch');
+    } else {
+      throw new Error(`Filtre inconnu : ${key}.`);
+    }
+  }
+
+  if (filter.tipsterId) requireRef(state.tipsters, String(filter.tipsterId), 'Tipster');
+  if (filter.oddsMin != null && filter.oddsMax != null && Number(filter.oddsMin) >= Number(filter.oddsMax)) {
+    throw new Error('La plage de cotes doit avoir une borne haute strictement supérieure à sa borne basse.');
+  }
+  if (filter.delayMinMinutes != null && filter.delayMaxMinutes != null && Number(filter.delayMinMinutes) >= Number(filter.delayMaxMinutes)) {
+    throw new Error('La plage de délais doit avoir une borne haute strictement supérieure à sa borne basse.');
+  }
+
+  if (typeof data.proof !== 'string' || !['declared', 'observed', 'simulated', 'executed'].includes(data.proof)) {
+    throw new Error('Niveau de preuve inconnu : choisissez explicitement déclaré, observé, simulé ou exécuté.');
+  }
+  if (data.phase != null && typeof data.phase !== 'string') throw new Error('La phase analysée doit être textuelle.');
+  if (data.axis != null && typeof data.axis !== 'string') throw new Error('L’axe analysé doit être textuel.');
+  const proof = enumValue(data.proof, ['declared', 'observed', 'simulated', 'executed'], 'Niveau de preuve', 'declared');
+  const phase = enumValue(data.phase, ['all', 'discovery', 'validation'], 'Période analysée', 'all');
+  const axis = data.axis == null ? null : enumValue(data.axis, ['sport', 'competition', 'market', 'odds', 'kind', 'timing', 'delay'], 'Axe analysé', 'sport');
+  const start = date(data.start, 'Début de période', true);
+  const end = date(data.end, 'Fin de période', true);
+  const discoveryEnd = date(data.discoveryEnd, 'Fin de découverte', true);
+  if (start && end && start >= end) throw new Error('La fin de période doit suivre strictement son début.');
+  const strategyId = text(data.strategyId, 'Stratégie') || null;
+  const simulationId = text(data.simulationId, 'Simulation') || null;
+  if (strategyId) requireRef(state.strategies, strategyId, 'Stratégie');
+  if (simulationId) requireRef(state.simulations, simulationId, 'Simulation');
+
+  const id = randomUUID();
+  const entry: AuditEntry = {
+    id, at: new Date().toISOString(), action: 'analysis.explore', entityId: id,
+    detail: JSON.stringify({ schemaVersion: 1, name: text(data.name, 'Nom de variante', false, 200),
+      filter, proof, discoveryEnd, start, end, axis, phase, strategyId, simulationId }),
+  };
+  state.audit.push(entry);
+  return entry;
 }
 function applyImportRow(state:AppState,kind:'picks'|'tickets',fileName:string,rowData:Record<string,unknown>):'created'|'updated'|'skipped'{
   const data={...rowData};
@@ -218,6 +285,7 @@ export async function executeAction(workspace:Workspace,action:string,payload:un
       case 'ledger.add':return addLedger(state,data);
       case 'strategy.save':return saveStrategy(state,data);
       case 'simulation.save':return saveSimulation(state,data);
+      case 'analysis.explore':return recordExploration(state,data);
       case 'settings.save':state.settings=validateSettings({...state.settings,...data} as Settings);audit(state,'settings.save','settings','Préférences et limites enregistrées');return state.settings;
       case 'import.commit':return commitImport(state,data);
       default:throw new Error('Action inconnue.');
@@ -228,7 +296,10 @@ export async function executeAction(workspace:Workspace,action:string,payload:un
 export async function seedDemo(workspace:Workspace='demo'):Promise<AppState>{
   if(workspace!=='demo')throw new Error('Les exemples ne peuvent être créés que dans la démonstration.');
   await transaction('demo',state=>{
-    if(state.audit.some(a=>a.action==='demo.seed'))return;
+    if(state.audit.some(a=>a.action==='demo.seed')){
+      enrichAnalysisDemo(state);
+      return;
+    }
     const now=Date.now(),iso=(days:number,hours=0)=>new Date(now+days*86400000+hours*3600000).toISOString();
     const names=['Atlas Football · fictif','Horizon Tennis · fictif','Ligne Claire · fictif','Tribune Sport · fictif'];
     const tipsters=names.map((name,i)=>saveTipster(state,{name,source:'Jeu de démonstration fictif',sourceUrl:'',discoveredAt:iso(-120),notes:'Données entièrement fictives pour découvrir les écrans ; aucune performance réelle.',monthlyCostCents:i===0?2900:0,completeness:i===0?'provided_complete':'unknown'}));
@@ -248,6 +319,7 @@ export async function seedDemo(workspace:Workspace='demo'):Promise<AppState>{
     const strategy=saveStrategy(state,{name:'Football simple · exemple figé',filter:{sport:'Football',kind:'single'},discoveryEnd:iso(-45),validationStart:iso(-44),notes:'Dates et données entièrement fictives. Exemple de règles figées avant la période de validation ; résultats historiques déclarés.'},true);
     strategy.createdAt=iso(-44.5);strategy.frozenAt=iso(-44.5);
     audit(state,'demo.seed','demo','Données fictives exclusivement dans la démonstration');
+    enrichAnalysisDemo(state);
   });return readState('demo');
 }
 
