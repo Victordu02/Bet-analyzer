@@ -14,7 +14,7 @@ npm run local
 
 `local` crée la configuration manquante, démarre PostgreSQL local si nécessaire, applique les migrations, puis lance Next.js sur l’interface locale au port **3000**. Une base déjà disponible est réutilisée. Le mot de passe initial est généré dans **`.local/initial-password.txt`**, lisible uniquement par son propriétaire : consultez ce fichier depuis votre terminal, connectez-vous et changez le mot de passe dans Paramètres. Ne transmettez jamais ce fichier dans une conversation ou dans Git.
 
-L’espace personnel démarre vide. **Explorer la démonstration** ouvre un espace séparé contenant uniquement des profils, événements, cotes et tickets fictifs. Les plafonds d’exemple sont 1 % par pari, 2 % par événement, 5 % d’exposition totale et un quart de Kelly. Ils ne configurent pas vos limites personnelles.
+L’espace personnel démarre vide. **Explorer la démonstration** ouvre un espace séparé contenant uniquement des profils, événements, cotes et tickets fictifs. Les nouveaux espaces proposent un quart de Kelly et des plafonds configurables de 1 % par pari, 2 % par événement et 5 % d’exposition totale. Les réglages existants sont préservés. Aucun capital ni limite de pertes personnelle n’est inventé : renseigner les fonds réels et les limites quotidienne et mensuelle avant toute allocation.
 
 Pour lancer les services séparément :
 
@@ -32,9 +32,9 @@ Le dossier `.local/postgres` conserve les données entre les redémarrages. Pour
 - **Radar** : dossiers, disponibilité et fraîcheur des cotes, seuil attribué au tipster, sources, révisions, fiche de décision.
 - **Tipsters** : fiches, provenance, complétude, classement à mise constante d’une unité et P&L pondéré par les mises déclarées, volume, dispersion, concentration et drawdown.
 - **Spécialités** : filtres prévus par sport, compétition, marché, cotes, simple/combiné, avant-match/live et délai ; séparation découverte / validation et règles figées versionnées.
-- **Simulations** : mise fixe, pourcentage, Kelly fractionné, doublons et plafonds partagés par panier ; calculatrices EV, sensibilité, marge et CLV ; rejeu chronologique et abstentions exportables.
-- **Bankroll** : tickets réellement acceptés, règlements et corrections, annulations, freebets, cashouts, frais, dépôts/retraits, journal au centime, exposition, valeur de part et rapprochement.
-- **Sources et imports** : CSV générique avec correspondance des colonnes, prévisualisation, erreurs et conflits, historique, réimport idempotent. Les templates sont fictifs.
+- **Simulations** : comparaison côte à côte de la mise fixe, du pourcentage et de Kelly fractionné, doublons et plafonds partagés par panier ; sauvegarde des hypothèses, budgets et trois méthodes sans mouvement cash ; calculatrices EV, sensibilité, marge et CLV ; rejeu chronologique et abstentions exportables.
+- **Bankroll** : tickets réellement acceptés, versements datés et corrections, annulations, freebets, cashouts partiels, frais, dépôts/retraits, journal au centime avec contrôle chronologique, exposition, valeur de part et rapprochements à date audités. Les historiques incomplets restent provisoires.
+- **Sources et imports** : CSV générique avec correspondance des colonnes, prévisualisation, erreurs et conflits, historique, réimport idempotent et reprise des seules lignes en échec d’un lot partiel. Les templates sont fictifs.
 - **Rapports** : synthèses à la demande, périodes, comparaison explicite des quatre niveaux de preuve et liens vers les enregistrements sources.
 - **Paramètres** : limites personnelles, pause des allocations, fraîcheur, fréquence de revue, rapprochement et changement de mot de passe. Thèmes clair/sombre et affichage mobile.
 
@@ -70,6 +70,6 @@ Bet Analytix et le compte Winamax restent sans synchronisation automatique. Aucu
 
 Cette version gère un portefeuille cash personnel global et ses affectations à des stratégies. Elle ne comporte pas de modèle prédictif validé, de notifications automatiques, d’OCR PDF/capture ou de comptes multi-utilisateurs. Les simulations historiques ne démontrent pas un avantage, et leurs hypothèses/couvertures restent visibles. Les extensions et limites détaillées sont dans [LIMITATIONS.md](docs/LIMITATIONS.md).
 
-Analyse et qualification : [TIPSTER_ANALYSIS.md](docs/TIPSTER_ANALYSIS.md). Radar et espérance : [RADAR.md](docs/RADAR.md). Spécification : [SPEC.md](SPEC.md).
+Analyse et qualification : [TIPSTER_ANALYSIS.md](docs/TIPSTER_ANALYSIS.md). Radar et espérance : [RADAR.md](docs/RADAR.md). Bankroll et mises : [BANKROLL.md](docs/BANKROLL.md). Spécification : [SPEC.md](SPEC.md).
 
 Conventions : [CALCULATIONS.md](docs/CALCULATIONS.md) · [IMPORTS.md](docs/IMPORTS.md) · [ARCHITECTURE.md](docs/ARCHITECTURE.md) · [REQUIREMENTS.md](docs/REQUIREMENTS.md).

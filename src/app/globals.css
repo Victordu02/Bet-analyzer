@@ -280,3 +280,78 @@
   .radar-dossier-quotes > .button { grid-column: 1 / -1; justify-content: center; }
   .radar-pagination > div { width: 100%; justify-content: space-between; }
 }
+
+/* Personal cash accounting and retained settlements. */
+.bankroll-view .bankroll-metrics { margin-bottom: 0; }
+.bankroll-view .metric-value { white-space: normal; overflow-wrap: anywhere; font-size: 25px; }
+.bankroll-view .metric-note { display: block; line-height: 1.8; }
+.bankroll-chart { height: 260px; width: 100%; padding: 0 8px; }
+.bankroll-chart-data { padding: 12px 22px 0; font-size: 10px; color: var(--teal); }
+.bankroll-chart-data > summary { cursor: pointer; line-height: 1.8; }
+.bankroll-chart-data .table-wrap { max-height: 260px; margin-top: 14px; }
+.bankroll-note { margin-top: 16px; }
+.bankroll-flow-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.bankroll-flow-grid > div { padding: 15px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel-soft); }
+.bankroll-flow-grid small { display: block; font-size: 10px; color: var(--muted); line-height: 1.8; }
+.bankroll-flow-grid strong { display: block; font-size: 20px; font-weight: 500; margin-top: 7px; overflow-wrap: anywhere; }
+.bankroll-issues { margin-top: 18px; color: var(--amber); font-size: 11px; line-height: 1.8; }
+.bankroll-issues > summary { cursor: pointer; }
+.bankroll-filter-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; padding: 0 22px 18px; }
+.bankroll-filter-caption { display: flex; align-items: center; justify-content: space-between; gap: 20px; font-size: 10px; color: var(--muted); line-height: 1.8; padding: 0 22px 18px; }
+.bankroll-filter-caption > .text-link { flex-shrink: 0; }
+.bankroll-inline-notice { margin: 0 22px 18px; }
+.bankroll-table td:first-child { min-width: 220px; max-width: 360px; }
+.bankroll-table .table-button { line-height: 1.8; white-space: normal; }
+.bankroll-table small { white-space: normal; line-height: 1.8; overflow-wrap: anywhere; }
+.bankroll-table .badge { white-space: normal; line-height: 1.6; }
+.bankroll-pagination { flex-wrap: wrap; }
+.bankroll-pagination > div { display: flex; align-items: center; gap: 12px; }
+.bankroll-ticket-detail .detail-line dt { flex: 1; }
+.bankroll-ticket-detail .detail-line dd { flex: 1; }
+.bankroll-ticket-detail header .badge { margin-top: 12px; }
+.bankroll-revision { margin-top: 14px; padding: 14px; background: var(--panel-soft); border: 1px solid var(--line); border-radius: 6px; font-size: 11px; line-height: 1.8; }
+.bankroll-revision summary { color: var(--teal); cursor: pointer; }
+.bankroll-revision pre { margin-top: 12px; font-size: 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 1100px) {
+  .bankroll-filter-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .bankroll-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0 18px 18px; }
+  .bankroll-flow-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .bankroll-flow-grid > div { padding: 13px; }
+  .bankroll-flow-grid strong { font-size: 18px; }
+  .bankroll-filter-caption { padding: 0 18px 18px; align-items: flex-start; }
+  .bankroll-view .metric-value { font-size: 22px; }
+  .bankroll-inline-notice { margin: 0 18px 18px; }
+  .bankroll-chart { height: 235px; }
+  .bankroll-chart-data { padding: 12px 18px 0; }
+  .bankroll-table .badge-outline { display: inline-flex; }
+}
+@media (max-width: 420px) {
+  .bankroll-filter-grid { grid-template-columns: 1fr; }
+  .bankroll-pagination > div { width: 100%; justify-content: space-between; }
+}
+
+/* Three methods, one retained candidate basket. */
+.simulation-basket-item { padding: 22px; border-top: 1px solid var(--line); }
+.simulation-basket-item .section-heading { align-items: flex-start; }
+.simulation-basket-item .form-grid { margin-top: 16px; }
+.simulation-basket-item h4 { font-size: 13px; line-height: 1.8; }
+.simulation-basket-controls { display: flex; gap: 7px; flex-shrink: 0; }
+.simulation-source-list { display: grid; gap: 16px; }
+.simulation-source-list > div { padding: 14px 0; border-bottom: 1px solid var(--line); font-size: 11px; line-height: 1.8; }
+.simulation-source-list > div:last-child { border: 0; }
+.simulation-source-list .muted { margin: 8px 0; }
+.simulation-method-card { display: flex; flex-direction: column; gap: 16px; }
+.simulation-method-card > .section-heading { margin: 0; }
+.simulation-method-card > .button { margin-top: auto; white-space: normal; }
+.simulation-method-card .detail-line { display: block; }
+.simulation-method-card .detail-line dd { margin-top: 5px; text-align: left; }
+.simulation-method-card .calculation-output strong { overflow-wrap: anywhere; }
+.simulation-method-card .table-wrap { min-width: 0; }
+@media (max-width: 760px) {
+  .simulation-basket-item { padding: 18px; }
+  .simulation-basket-item .section-heading { flex-direction: column; }
+  .simulation-basket-controls { width: 100%; }
+  .simulation-basket-controls > button:last-child { margin-left: auto; }
+}

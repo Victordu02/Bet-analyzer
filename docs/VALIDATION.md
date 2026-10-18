@@ -91,3 +91,30 @@ Les **15 tests du transport et des correspondances** utilisent des réponses v4 
 Les captures exclues de Git sont `test-results/radar-odds-desktop.png`, `radar-odds-mobile.png`, `decision-ev-desktop.png` et `decision-ev-mobile.png`. Le parcours utilise exclusivement des données fictives dans la démonstration et compare les volumes personnels avant/après.
 
 La documentation officielle actuelle confirme `winamax_fr` ; les pages et le contrat vérifiés sont référencés dans [CONNECTORS.md](CONNECTORS.md). **La clé `ODDS_API_KEY` est absente : aucune collecte authentifiée de cotes réelles n’a été exécutée.** La couverture et les règles du forfait doivent encore être vérifiées lors de la recette avec une clé configurée. La suite E2E complète initiale n’a pas été relancée pour ce complément.
+
+## Complément — bankroll et simulation de mises, sections 8 et 10
+
+Validation exécutée le **18 octobre 2026**.
+
+| Contrôle | Résultat |
+| --- | --- |
+| `npm test` | **172 tests réussis**, 12 fichiers, aucun test ignoré |
+| `npm run typecheck` | Réussi sans erreur |
+| `npm run build` | Build de production et vérification TypeScript réussis |
+| `npm run db:migrate` | Migration `0002_import_retries.sql` appliquée sur l’installation locale ; également vérifiée sur `prisme_test` |
+| Chromium ciblé | Formulaires et tableaux bankroll, rapprochement et comparaison des trois méthodes vérifiés sur ordinateur 1440 × 1000 et mobile 390 × 844 |
+| Ticket via formulaire | Mise 20 €, cash disponible débité de 20 €, position ouverte de 20 € ; règlement 50 €, résultat +30 €, position libérée |
+| Cashouts successifs | Deux encaissements fictifs de 4 € puis 3 € conservés à leurs dates propres, cumul 7 € |
+| Rapprochement via formulaire | Cash calculé à la seconde du relevé, écart volontaire de **1 centime**, source et écritures conservées dans l’audit ; aucun mouvement ajouté |
+| Comparaison et archivage | Trois méthodes retournées, snapshot sauvegardé, journal strictement identique avant/après l’archivage |
+| Interface | Captures inspectées, aucun débordement horizontal de page ni erreur JavaScript dans le parcours réussi |
+
+Les **57 tests supplémentaires** comprennent 20 cas financiers déterministes, 25 cas de validation/import, huit intégrations PostgreSQL et quatre cas de saisie monétaire et de dates. Ils couvrent retours bruts et nets, remboursement cash, freebet sans débit facial, frais, cashouts partiels et multiples, coût restant inconnu, anciens cumuls non détaillés, corrections, capital externe distinct du résultat et rapprochements datés.
+
+Les contraintes de mise sont vérifiées conjointement : mise fixe/pourcentage/quart de Kelly, plancher au centime, limites pari/événement/exposition, budgets jour/mois de Paris, pause, probabilité absente, doublons, lignes numériques équivalentes et alias fournisseur hérités. Les tests vérifient aussi qu’un dépôt ou retour futur ne finance pas une mise passée et que les pertes n’entraînent pas d’augmentation automatique des mises.
+
+Les intégrations utilisent exclusivement `prisme_test`. Elles vérifient les écritures compensatrices, la conservation des versements antérieurs, les reprises d’import sans nouvelle mise, les snapshots serveur, le rapprochement historique et la restauration des sauvegardes avec dates, montants et liens de reprise cohérents.
+
+Le parcours Chromium final utilise les données fictives de démonstration et compare les effectifs **et les réglages** personnels avant/après. Lors d’une tentative préparatoire, un rechargement a ramené le script sur l’espace personnel et un relevé fictif y a été enregistré, sans ticket ni mouvement financier. Ce seul audit de recette a été retiré et ses deux références de réglage restaurées à leur valeur antérieure ; le parcours corrigé vérifie la bannière de démonstration après chaque rechargement. Aucune donnée de recette personnelle ne subsiste.
+
+Les captures, exclues de Git, sont `test-results/bankroll-finance-desktop.png`, `bankroll-finance-mobile.png`, `simulations-finance-desktop.png` et `simulations-finance-mobile.png`. Ce contrôle ciblé est distinct des deux tests E2E initiaux ; leur suite complète n’a pas été relancée. Les anciens cashouts sans détail restent explicitement provisoires : leur migration ne démontre ni dates ni coûts intermédiaires absents.

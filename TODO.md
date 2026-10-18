@@ -77,3 +77,20 @@ Conventions et limites : [TIPSTER_ANALYSIS.md](docs/TIPSTER_ANALYSIS.md) et [CAL
 - [ ] Réaliser la recette de connexion réelle après configuration sécurisée de `ODDS_API_KEY` ; aucun accès au compte joueur, pari automatique ou abonnement payant n’est nécessaire à ce module.
 
 Parcours, configuration et conventions : [RADAR.md](docs/RADAR.md), [CONNECTORS.md](docs/CONNECTORS.md) et [CALCULATIONS.md](docs/CALCULATIONS.md).
+
+
+## 6. Bankroll, mises et exposition — sections 8 et 10
+
+- [x] Centraliser les positions, le capital, les limites de pertes et les rapprochements dans `accounting.ts` et `finance.ts`, avec montants exacts en centimes et saisie sans arrondi silencieux.
+- [x] Contrôler la chronologie du cash, les remboursements, les freebets et les frais ; conserver les corrections par contre-écritures, sans doubler les débits ou les retours.
+- [x] Distinguer les versements successifs d’un cashout et les corrections ciblées ; conserver dates, identifiants et coûts restants connus, sans fabriquer les cessions manquantes des anciens cumuls.
+- [x] Afficher cash, positions ouvertes, résultat cash, promotions, frais, flux externes et performance neutralisée des apports ; laisser les historiques incomplets provisoires ou non applicables.
+- [x] Ajouter les rapprochements au centime à une date précise, avec sources et snapshots audités immuables, distincts du résultat recalculé avec les corrections actuelles.
+- [x] Comparer les trois méthodes sur les mêmes candidats ordonnés, avec arrondi inférieur au centime, doublons regroupés, événements corrélés et alias fournisseur, budgets partagés et abstentions motivées.
+- [x] Sauvegarder les trois méthodes, hypothèses, paramètres, capital, exposition et cotes disponibles sans créer de ticket ni d’écriture de cash.
+- [x] Appliquer aux nouveaux espaces les défauts quart de Kelly / 1 % / 2 % / 5 %, en conservant les réglages existants et sans ajouter de capital ou de limites de pertes personnelles.
+- [x] Permettre la reprise des lignes en échec d’un import partiel avec `retryOf` et `completedRows` ; préserver les lignes déjà traitées et les corrections manuelles.
+- [x] Valider `npm test` (**172 tests**, 12 fichiers), `npm run typecheck` et `npm run build`. Recette Chromium ciblée des formulaires, rapprochement, cashouts et trois méthodes réussie sur ordinateur et mobile, sans mouvement personnel conservé ni effet comptable des simulations.
+- [ ] Compléter les anciens cumuls de cashouts à partir de justificatifs réels lorsqu’ils deviennent disponibles ; ne pas traiter leur migration technique comme un historique détaillé.
+
+Contrats et limites : [BANKROLL.md](docs/BANKROLL.md), [CALCULATIONS.md](docs/CALCULATIONS.md) et [IMPORTS.md](docs/IMPORTS.md). Les contrôles exécutés et leurs résultats sont consignés dans [VALIDATION.md](docs/VALIDATION.md).
